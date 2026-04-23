@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>Такса и косточки</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="/sdk.js"></script>
+</head>
+<body>
+  <div id="app">
+    <div id="hud">
+      <div class="hud-item">Счёт: <span id="score">0</span></div>
+      <div class="hud-item">Рекорд: <span id="best">0</span></div>
+      <button id="pause-btn" type="button" aria-label="Пауза">II</button>
+    </div>
+
+    <canvas id="game" width="600" height="600"></canvas>
+
+    <div id="overlay" class="overlay">
+      <div class="panel">
+        <h1>Такса и косточки</h1>
+        <p class="subtitle">Управляй таксой и собирай косточки!</p>
+        <ul class="controls">
+          <li><b>Стрелки</b> / <b>WASD</b> — движение</li>
+          <li><b>Пробел</b> / <b>P</b> — пауза</li>
+          <li>На телефоне — свайпы</li>
+        </ul>
+        <button id="start-btn" class="primary" type="button">Играть</button>
+      </div>
+    </div>
+
+    <div id="gameover" class="overlay hidden">
+      <div class="panel">
+        <h2>Игра окончена</h2>
+        <p>Твой счёт: <span id="final-score">0</span></p>
+        <p class="best-line">Рекорд: <span id="final-best">0</span></p>
+        <button id="restart-btn" class="primary" type="button">Ещё раз</button>
+      </div>
+    </div>
+
+    <div id="pause" class="overlay hidden">
+      <div class="panel">
+        <h2>Пауза</h2>
+        <button id="resume-btn" class="primary" type="button">Продолжить</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="game.js"></script>
+</body>
+</html>
