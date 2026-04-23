@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>BetLife — ставки на жизнь</title>
+<link rel="stylesheet" href="style.css" />
+<link rel="icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><text y='50' font-size='52'>🎲</text></svg>" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="logo">
+      <span class="logo-mark">🎲</span>
+      <span class="logo-text">Bet<span class="accent">Life</span></span>
+      <span class="logo-sub">ставки на жизнь</span>
+    </div>
+    <nav class="tabs" id="tabs">
+      <button class="tab active" data-cat="life">🎭 Жизнь</button>
+      <button class="tab" data-cat="sport">⚽ Спорт</button>
+      <button class="tab" data-cat="weird">🌀 Абсурд</button>
+      <button class="tab" data-cat="office">💼 Офис</button>
+      <button class="tab" data-cat="home">🏠 Дома</button>
+      <button class="tab" data-cat="mine">🧑‍🎨 Мои</button>
+      <button class="tab" data-cat="history">📜 История</button>
+    </nav>
+    <div class="balance" title="Виртуальный баланс">
+      <span class="balance-label">Баланс</span>
+      <span class="balance-value" id="balance">10 000 ₽</span>
+      <button class="btn-small" id="reset-balance" title="Сбросить прогресс">⟲</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="events" id="events"></section>
+
+    <aside class="coupon">
+      <div class="coupon-header">
+        <h2>Купон</h2>
+        <button class="btn-ghost" id="clear-coupon">Очистить</button>
+      </div>
+      <div class="coupon-items" id="coupon-items">
+        <div class="coupon-empty">Выбери исход в любом событии, чтобы добавить его в купон.</div>
+      </div>
+      <div class="coupon-summary" id="coupon-summary" hidden>
+        <div class="row"><span>Событий</span><span id="coupon-count">0</span></div>
+        <div class="row"><span>Общий коэф.</span><span id="coupon-odds">1.00</span></div>
+        <label class="stake-row">
+          <span>Ставка, ₽</span>
+          <input type="number" id="stake" min="10" step="10" value="100" />
+        </label>
+        <div class="row big"><span>Возможный выигрыш</span><span id="coupon-win">100 ₽</span></div>
+        <button class="btn-primary" id="place-bet">Сделать ставку</button>
+      </div>
+    </aside>
+  </main>
+
+  <button class="fab" id="add-event-btn" title="Добавить своё событие">+ Создать событие</button>
+
+  <!-- Modal: add custom event -->
+  <div class="modal-backdrop" id="modal-backdrop" hidden>
+    <div class="modal">
+      <div class="modal-head">
+        <h3>Новое событие</h3>
+        <button class="btn-ghost" id="modal-close">✕</button>
+      </div>
+      <div class="modal-body">
+        <label class="field">
+          <span>Название события</span>
+          <input type="text" id="f-title" placeholder="Например: Сосед Вася опоздает на работу" maxlength="120"/>
+        </label>
+        <label class="field">
+          <span>Категория</span>
+          <select id="f-category">
+            <option value="mine">🧑‍🎨 Мои</option>
+            <option value="life">🎭 Жизнь</option>
+            <option value="office">💼 Офис</option>
+            <option value="home">🏠 Дома</option>
+            <option value="weird">🌀 Абсурд</option>
+            <option value="sport">⚽ Спорт</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>Описание (необязательно)</span>
+          <textarea id="f-desc" rows="2" placeholder="Любые детали и правила"></textarea>
+        </label>
+        <div class="outcomes" id="outcomes">
+          <!-- outcome rows injected -->
+        </div>
+        <button class="btn-ghost" id="add-outcome">+ Добавить исход</button>
+        <div class="hint">Коэффициенты должны давать суммарную вероятность ≈ 100% (мы покажем, если «маржа» слишком большая).</div>
+        <div class="hint" id="f-probsum"></div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn-ghost" id="modal-cancel">Отмена</button>
+        <button class="btn-primary" id="modal-save">Сохранить</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: resolve event (simulate outcome) -->
+  <div class="modal-backdrop" id="resolve-backdrop" hidden>
+    <div class="modal">
+      <div class="modal-head">
+        <h3>🎲 Разрешение события</h3>
+        <button class="btn-ghost" id="resolve-close">✕</button>
+      </div>
+      <div class="modal-body" id="resolve-body"></div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast" hidden></div>
+
+  <script src="events.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
