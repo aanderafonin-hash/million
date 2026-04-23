@@ -1,0 +1,203 @@
+:root {
+  --sky-top: #87ceeb;
+  --sky-bottom: #c9ecff;
+  --accent: #ff8a3d;
+  --accent-dark: #e56a1a;
+  --shadow: 0 6px 20px rgba(20, 40, 80, 0.25);
+  --card-bg: rgba(255, 255, 255, 0.94);
+  --text: #2a2a2a;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  background: #000;
+  font-family: "Nunito", "Segoe UI", system-ui, sans-serif;
+  color: var(--text);
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+#app {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  background: linear-gradient(180deg, var(--sky-top), var(--sky-bottom));
+}
+
+#game {
+  display: block;
+  width: 100%;
+  height: 100%;
+  image-rendering: auto;
+}
+
+.hidden { display: none !important; }
+
+/* HUD */
+#hud {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  right: 12px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  pointer-events: none;
+  z-index: 3;
+}
+.hud-item {
+  background: rgba(0, 0, 0, 0.35);
+  color: #fff;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 16px;
+  backdrop-filter: blur(4px);
+}
+#pause-btn {
+  margin-left: auto;
+  pointer-events: auto;
+  font-weight: 900;
+  letter-spacing: 2px;
+}
+
+/* Экраны */
+.screen {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 5;
+  background: radial-gradient(ellipse at center, rgba(0,0,0,0.15), rgba(0,0,0,0.45));
+  backdrop-filter: blur(2px);
+}
+.screen__card {
+  background: var(--card-bg);
+  border-radius: 20px;
+  padding: 24px 28px;
+  box-shadow: var(--shadow);
+  width: min(420px, 92vw);
+  text-align: center;
+}
+.title {
+  margin: 0 0 10px;
+  font-size: 28px;
+  line-height: 1.1;
+  color: var(--accent-dark);
+  font-weight: 900;
+}
+.title--sm { font-size: 22px; }
+.subtitle {
+  display: block;
+  font-size: 16px;
+  color: #555;
+  font-weight: 700;
+  margin-top: 4px;
+}
+.hint {
+  margin: 0 0 16px;
+  font-size: 15px;
+  line-height: 1.45;
+  color: #333;
+}
+.level-name {
+  font-weight: 800;
+  color: var(--accent-dark);
+  font-size: 18px;
+  margin: 4px 0 8px;
+}
+
+/* Кнопки */
+.ui-btn {
+  display: inline-block;
+  width: 100%;
+  margin: 6px 0;
+  padding: 12px 16px;
+  border: none;
+  border-radius: 14px;
+  background: #fff;
+  color: var(--text);
+  font-size: 16px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 3px 0 rgba(0,0,0,0.12);
+  transition: transform 0.08s ease, box-shadow 0.08s ease;
+}
+.ui-btn:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 rgba(0,0,0,0.12);
+}
+.ui-btn--primary {
+  background: var(--accent);
+  color: #fff;
+}
+.ui-btn--primary:hover { background: var(--accent-dark); }
+.ui-btn--icon {
+  width: auto;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: rgba(0,0,0,0.35);
+  color: #fff;
+  margin: 0;
+  font-size: 14px;
+  box-shadow: none;
+}
+
+/* Сетка уровней */
+.level-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+  margin: 10px 0 16px;
+}
+.level-cell {
+  aspect-ratio: 1 / 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  font-size: 18px;
+  border-radius: 12px;
+  border: 2px solid var(--accent);
+  background: #fff8f2;
+  color: var(--accent-dark);
+  cursor: pointer;
+  transition: transform 0.08s;
+}
+.level-cell.locked {
+  background: #eee;
+  color: #aaa;
+  border-color: #ccc;
+  cursor: not-allowed;
+}
+.level-cell.completed {
+  background: var(--accent);
+  color: #fff;
+}
+.level-cell:hover:not(.locked) { transform: translateY(-2px); }
+
+/* Tap zone - невидимая область для тапа по всему экрану во время игры */
+#tap-zone {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background: transparent;
+  cursor: pointer;
+}
+
+@media (max-width: 480px) {
+  .title { font-size: 24px; }
+  .hud-item { font-size: 14px; padding: 4px 10px; }
+  .screen__card { padding: 20px; }
+}
