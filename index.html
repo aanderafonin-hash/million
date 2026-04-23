@@ -9,44 +9,124 @@
 </head>
 <body>
   <div id="app">
-    <div id="hud">
-      <div class="hud-item">Счёт: <span id="score">0</span></div>
-      <div class="hud-item">Рекорд: <span id="best">0</span></div>
+    <div id="hud" class="hidden">
+      <div class="hud-item">Уровень: <span id="hud-level">1</span></div>
+      <div class="hud-item">Косточки: <span id="hud-bones">0</span>/<span id="hud-goal">3</span></div>
+      <div class="hud-item">Счёт: <span id="hud-score">0</span></div>
       <button id="pause-btn" type="button" aria-label="Пауза">II</button>
     </div>
 
     <canvas id="game" width="600" height="600"></canvas>
 
-    <div id="overlay" class="overlay">
+    <!-- Main menu -->
+    <div id="overlay-menu" class="overlay">
       <div class="panel">
-        <h1>Такса и косточки</h1>
-        <p class="subtitle">Управляй таксой и собирай косточки!</p>
+        <h1>🐕 Такса и косточки</h1>
+        <p class="subtitle">Помоги таксе собрать все косточки!</p>
+        <p class="player-line hidden" id="player-line">Игрок: <b id="player-name-display"></b> <button class="link" id="change-name-btn" type="button">сменить</button></p>
+        <div class="btn-row">
+          <button id="play-btn" class="primary" type="button">Играть</button>
+          <button id="levels-btn" class="secondary" type="button">Уровни</button>
+          <button id="leaderboard-btn" class="secondary" type="button">Рейтинг</button>
+        </div>
         <ul class="controls">
           <li><b>Стрелки</b> / <b>WASD</b> — движение</li>
           <li><b>Пробел</b> / <b>P</b> — пауза</li>
           <li>На телефоне — свайпы</li>
         </ul>
-        <button id="start-btn" class="primary" type="button">Играть</button>
       </div>
     </div>
 
-    <div id="gameover" class="overlay hidden">
+    <!-- Name entry -->
+    <div id="overlay-name" class="overlay hidden">
       <div class="panel">
-        <h2>Игра окончена</h2>
-        <p>Твой счёт: <span id="final-score">0</span></p>
-        <p class="best-line">Рекорд: <span id="final-best">0</span></p>
-        <button id="restart-btn" class="primary" type="button">Ещё раз</button>
+        <h2>Как тебя зовут?</h2>
+        <p class="subtitle">Имя будет в таблице рекордов</p>
+        <input type="text" id="name-input" maxlength="16" placeholder="Хозяин таксы" autocomplete="off" />
+        <button id="name-save-btn" class="primary" type="button">Поехали!</button>
       </div>
     </div>
 
-    <div id="pause" class="overlay hidden">
+    <!-- Level select -->
+    <div id="overlay-levels" class="overlay hidden">
+      <div class="panel wide">
+        <h2>Выбор уровня</h2>
+        <div id="levels-grid" class="levels-grid"></div>
+        <button class="secondary back-btn" data-back="overlay-menu" type="button">Назад</button>
+      </div>
+    </div>
+
+    <!-- Leaderboard -->
+    <div id="overlay-leaderboard" class="overlay hidden">
+      <div class="panel">
+        <h2>🏆 Рейтинг игроков</h2>
+        <ol id="leaderboard-list" class="leaderboard"></ol>
+        <p id="leaderboard-empty" class="subtitle hidden">Пока никто не попал в топ. Будь первым!</p>
+        <button class="secondary back-btn" data-back="overlay-menu" type="button">Назад</button>
+      </div>
+    </div>
+
+    <!-- Pause -->
+    <div id="overlay-pause" class="overlay hidden">
       <div class="panel">
         <h2>Пауза</h2>
-        <button id="resume-btn" class="primary" type="button">Продолжить</button>
+        <div class="btn-row">
+          <button id="resume-btn" class="primary" type="button">Продолжить</button>
+          <button id="quit-btn" class="secondary" type="button">В меню</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Game over -->
+    <div id="overlay-gameover" class="overlay hidden">
+      <div class="panel">
+        <h2>Ой, такса устала…</h2>
+        <p>Уровень: <b id="go-level">1</b></p>
+        <p>Собрано косточек: <b id="go-bones">0</b> / <b id="go-goal">3</b></p>
+        <p class="best-line">Счёт за попытку: <b id="go-score">0</b></p>
+        <div class="btn-row">
+          <button id="retry-btn" class="primary" type="button">Ещё раз</button>
+          <button id="go-menu-btn" class="secondary" type="button">В меню</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Level complete -->
+    <div id="overlay-win" class="overlay hidden">
+      <div class="panel">
+        <h2>Уровень пройден!</h2>
+        <div class="reward-display">
+          <div class="reward-icon" id="win-icon">🥉</div>
+          <div class="reward-title" id="win-title">Щенок</div>
+        </div>
+        <p>Уровень <b id="win-level">1</b> — <span id="win-name"></span></p>
+        <p>Счёт за уровень: <b id="win-score">0</b></p>
+        <p class="best-line">Общий счёт: <b id="win-total">0</b></p>
+        <div class="btn-row">
+          <button id="next-btn" class="primary" type="button">Следующий уровень</button>
+          <button id="win-menu-btn" class="secondary" type="button">В меню</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- All levels complete -->
+    <div id="overlay-finale" class="overlay hidden">
+      <div class="panel">
+        <h2>🎉 Все уровни пройдены!</h2>
+        <div class="reward-display">
+          <div class="reward-icon">⭐</div>
+          <div class="reward-title">Чемпион</div>
+        </div>
+        <p>Ты настоящий хозяин самой быстрой таксы!</p>
+        <p>Итоговый счёт: <b id="finale-total">0</b></p>
+        <div class="btn-row">
+          <button id="finale-menu-btn" class="primary" type="button">В меню</button>
+        </div>
       </div>
     </div>
   </div>
 
+  <script src="levels.js"></script>
   <script src="game.js"></script>
 </body>
 </html>
