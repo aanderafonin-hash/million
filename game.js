@@ -124,9 +124,14 @@
     // Reset idle scene
     state.level = LEVELS[0];
     state.obstaclesSet = new Set(state.level.obstacles.map(p => p.x + ',' + p.y));
+    const s = findSafeStart(state.obstaclesSet);
     state.dog = [
-      { x: 9, y: 10 }, { x: 8, y: 10 }, { x: 7, y: 10 },
+      { x: s.x, y: s.y },
+      { x: s.x - s.dir.x, y: s.y - s.dir.y },
+      { x: s.x - 2 * s.dir.x, y: s.y - 2 * s.dir.y },
     ];
+    state.dir = s.dir;
+    state.pendingDir = s.dir;
     state.bone = spawnBone();
     refreshMenu();
     showOnly('menu');
@@ -208,21 +213,15 @@
     if (!lv) return;
     state.level = lv;
     state.obstaclesSet = new Set(lv.obstacles.map(p => p.x + ',' + p.y));
-    // Find a safe starting area in row 10
-    let startX = 7;
-    // slide right if obstacles block the 3-cell starting line
-    while (startX <= 14 && (
-      state.obstaclesSet.has(startX + ',10') ||
-      state.obstaclesSet.has((startX - 1) + ',10') ||
-      state.obstaclesSet.has((startX - 2) + ',10')
-    )) startX++;
+    // Find a safe starting area: 3-cell body + 4-cell runway ahead
+    const start = findSafeStart(state.obstaclesSet);
     state.dog = [
-      { x: startX, y: 10 },
-      { x: startX - 1, y: 10 },
-      { x: startX - 2, y: 10 },
+      { x: start.x, y: start.y },
+      { x: start.x - start.dir.x, y: start.y - start.dir.y },
+      { x: start.x - 2 * start.dir.x, y: start.y - 2 * start.dir.y },
     ];
-    state.dir = DIR.RIGHT;
-    state.pendingDir = DIR.RIGHT;
+    state.dir = start.dir;
+    state.pendingDir = start.dir;
     state.bone = spawnBone();
     state.bonesEaten = 0;
     state.score = 0;
@@ -239,6 +238,53 @@
     hudScore.textContent = '0';
     hudEl.classList.remove('hidden');
     showOnly(null);
+  }
+
+  function findSafeStart(obstacles) {
+    // Try rows near the center first, then spiral outward
+    const rowOrder = [10, 11, 9, 12, 8, 13, 7, 14, 6, 15, 5, 16, 4, 17, 3, 18, 2, 1];
+    const dirs = [DIR.RIGHT, DIR.LEFT, DIR.DOWN, DIR.UP];
+    for (const y of rowOrder) {
+      for (const dir of dirs) {
+        // For horizontal direction, scan across rows; for vertical, scan across cols
+        if (dir.y === 0) {
+          // horizontal: body at (x-2*d, y), (x-d, y), (x, y); runway needs (x+d, y), (x+2*d, y), (x+3*d, y) free
+          const xs = dir.x > 0 ? [7, 8, 6, 9, 5, 10, 4, 11, 3, 12, 2, 13] : [12, 11, 13, 10, 14, 9, 15, 8, 16, 7, 17, 6];
+          for (const x of xs) {
+            if (cellsFree([
+              { x, y },
+              { x: x - dir.x, y },
+              { x: x - 2 * dir.x, y },
+              { x: x + dir.x, y },
+              { x: x + 2 * dir.x, y },
+              { x: x + 3 * dir.x, y },
+            ], obstacles)) return { x, y, dir };
+          }
+        } else {
+          const xs = [10, 11, 9, 12, 8, 13, 7, 14, 6, 15, 5, 16];
+          for (const x of xs) {
+            if (cellsFree([
+              { x, y },
+              { x, y: y - dir.y },
+              { x, y: y - 2 * dir.y },
+              { x, y: y + dir.y },
+              { x, y: y + 2 * dir.y },
+              { x, y: y + 3 * dir.y },
+            ], obstacles)) return { x, y, dir };
+          }
+        }
+      }
+    }
+    // Fallback: minimal check row 10 facing right
+    return { x: 3, y: 10, dir: DIR.RIGHT };
+  }
+
+  function cellsFree(cells, obstacles) {
+    for (const c of cells) {
+      if (c.x < 0 || c.y < 0 || c.x >= GRID || c.y >= GRID) return false;
+      if (obstacles.has(c.x + ',' + c.y)) return false;
+    }
+    return true;
   }
 
   function spawnBone() {
@@ -1100,11 +1146,16 @@
   // Idle scene behind the main menu: show level 1 preview
   state.level = LEVELS[0];
   state.obstaclesSet = new Set(state.level.obstacles.map(p => p.x + ',' + p.y));
-  state.dog = [
-    { x: 9, y: 10 },
-    { x: 8, y: 10 },
-    { x: 7, y: 10 },
-  ];
+  {
+    const s = findSafeStart(state.obstaclesSet);
+    state.dog = [
+      { x: s.x, y: s.y },
+      { x: s.x - s.dir.x, y: s.y - s.dir.y },
+      { x: s.x - 2 * s.dir.x, y: s.y - 2 * s.dir.y },
+    ];
+    state.dir = s.dir;
+    state.pendingDir = s.dir;
+  }
   state.bone = spawnBone();
 
   refreshMenu();
