@@ -520,17 +520,63 @@ const Sprites = (() => {
     });
   }
 
+  function drawFridge(ctx, x, y, w, h, flipped = false) {
+    withFlip(ctx, x, y, w, h, flipped, () => {
+      // Корпус
+      ctx.fillStyle = '#ececec';
+      roundRect(ctx, x + w * 0.05, y, w * 0.9, h, 10);
+      ctx.fill();
+      ctx.strokeStyle = '#9a9a9a';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      // Тень сбоку
+      ctx.fillStyle = 'rgba(0,0,0,0.08)';
+      ctx.fillRect(x + w * 0.05, y, w * 0.06, h);
+      // Разделитель между отсеками (1/3 сверху — морозилка)
+      const splitY = y + h * 0.33;
+      ctx.strokeStyle = '#9a9a9a';
+      ctx.beginPath();
+      ctx.moveTo(x + w * 0.05, splitY);
+      ctx.lineTo(x + w * 0.95, splitY);
+      ctx.stroke();
+      // Ручки дверей (тёмно-серые скобы)
+      ctx.fillStyle = '#4a4a4a';
+      ctx.fillRect(x + w * 0.78, y + h * 0.12, w * 0.05, h * 0.14);
+      ctx.fillRect(x + w * 0.78, y + h * 0.45, w * 0.05, h * 0.18);
+      // Морозилка (верх) — чуть темнее
+      ctx.fillStyle = 'rgba(120,160,200,0.18)';
+      roundRect(ctx, x + w * 0.08, y + 4, w * 0.84, h * 0.33 - 6, 8);
+      ctx.fill();
+      // Магнитик-украшение на средней двери
+      ctx.fillStyle = '#e03e3e';
+      ctx.beginPath();
+      ctx.arc(x + w * 0.3, y + h * 0.55, Math.min(w, h) * 0.04, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#ffd14d';
+      ctx.beginPath();
+      ctx.arc(x + w * 0.38, y + h * 0.62, Math.min(w, h) * 0.035, 0, Math.PI * 2);
+      ctx.fill();
+      // Бренд-полоса
+      ctx.fillStyle = 'rgba(0,0,0,0.25)';
+      ctx.fillRect(x + w * 0.15, y + h * 0.23, w * 0.28, h * 0.03);
+    });
+  }
+
   const drawers = {
-    sofa: drawSofa,
-    armchair: drawArmchair,
-    chair: drawChair,
-    boot: drawBoot,
+    // Активные препятствия
+    fridge: drawFridge,
     slipper: drawSlipper,
-    toilet: drawToilet,
+    boot: drawBoot,
+    // Легаси-типы больше не используются уровнями, но маппинг оставлен на случай
+    // загрузки старого прогресса/сохранений — отрисуем как ботинок.
+    sofa: drawBoot,
+    armchair: drawBoot,
+    chair: drawBoot,
+    toilet: drawBoot,
   };
 
   function drawObstacle(ctx, type, x, y, w, h, flipped = false) {
-    const fn = drawers[type] || drawSofa;
+    const fn = drawers[type] || drawBoot;
     fn(ctx, x, y, w, h, flipped);
   }
 

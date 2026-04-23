@@ -16,6 +16,11 @@
   const PEKINESE_COL_R = 24;   // радиус коллизий (меньше спрайта, для честности)
   const MAX_TILT = 0.9;        // макс. угол наклона пекинеса
   const END_RUN_DIST = 600;    // дистанция финальной "анимированной" сцены
+  // Косточки-пикапы, собираемые во время полёта
+  const BONE_SIZE = 40;
+  const BONE_COL_R = 22;
+  const BONE_GROWTH = 0.05;    // +5% объёма за косточку
+  const MAX_BONE_SCALE = 1.8;  // максимум — примерно в 1.8x
 
   const STATE = {
     MENU: 'menu',
@@ -137,6 +142,8 @@
     sessionBest: 0,
     pekinese: null,
     obstacles: [],
+    bones: [],
+    bonesCollected: 0,
     scrollX: 0,
     obstaclesPassed: 0,
     groundOffset: 0,
@@ -184,6 +191,11 @@
       rotation: 0,
       alive: true,
       flapTime: 0,
+      // Коэффициент объёма пекинеса — растёт с каждой съеденной косточкой.
+      // Влияет и на размер спрайта, и на радиус коллизий.
+      sizeScale: 1,
+      // Пульсация при поедании косточки (мс)
+      chompTime: 0,
     };
   }
 
@@ -195,7 +207,7 @@
     Sound.flap();
   }
 
-  // ---------- Препятствия ----------
+  // ---------- Препятствия и косточки ----------
   function spawnObstacleSet() {
     const level = LEVELS[Game.currentLevel];
     const gap = level.gapSize;
@@ -216,10 +228,34 @@
       typeTop, typeBottom,
       passed: false,
     });
+    // Косточка между предыдущим и новым препятствием (если есть предыдущее)
+    if (Game.obstacles.length >= 2) {
+      const prev = Game.obstacles[Game.obstacles.length - 2];
+      spawnBoneBetween(prev, Game.obstacles[Game.obstacles.length - 1]);
+    }
+  }
+
+  function spawnBoneBetween(prev, next) {
+    // Кость ставим примерно посередине между препятствиями, в середине
+    // пролетаемой зоны (над/под полом), слегка случайно по вертикали.
+    const betweenX = (prev.x + OBSTACLE_W + next.x) / 2;
+    // Берём середину пересечения двух гапов, чтобы косточка была достижима
+    // без лишнего риска зацепиться за препятствие.
+    const gapTop = Math.max(prev.topH, next.topH);
+    const gapBottom = Math.min(prev.bottomY, next.bottomY);
+    const mid = (gapTop + gapBottom) / 2;
+    const jitter = (Math.random() - 0.5) * Math.max(20, (gapBottom - gapTop) * 0.3);
+    Game.bones.push({
+      x: betweenX,
+      y: mid + jitter,
+      collected: false,
+      rot: Math.random() * 0.6 - 0.3,
+    });
   }
 
   function prepareInitialObstacles() {
     Game.obstacles = [];
+    Game.bones = [];
     // Первое препятствие ставим подальше, чтобы у игрока было время
     const level = LEVELS[Game.currentLevel];
     let x = Game.width + 200;
@@ -239,6 +275,12 @@
         typeTop, typeBottom,
         passed: false,
       });
+      if (i > 0) {
+        spawnBoneBetween(
+          Game.obstacles[Game.obstacles.length - 2],
+          Game.obstacles[Game.obstacles.length - 1],
+        );
+      }
       x += level.spacing;
     }
   }
@@ -248,6 +290,7 @@
     Game.currentLevel = idx;
     Game.score = 0;
     Game.obstaclesPassed = 0;
+    Game.bonesCollected = 0;
     Game.pekinese = createPekinese();
     Game.scrollX = 0;
     Game.cutscene = null;
@@ -257,14 +300,25 @@
   }
 
   // ---------- Коллизии ----------
+  function pekineseRadius() {
+    return PEKINESE_COL_R * (Game.pekinese ? Game.pekinese.sizeScale : 1);
+  }
+
   function hitsObstacle(p, ob) {
     // Круг пекинеса vs прямоугольник препятствия
-    const r = PEKINESE_COL_R;
+    const r = pekineseRadius();
     // Верхнее препятствие
     if (aabbVsCircle(ob.x, 0, OBSTACLE_W, ob.topH, p.x, p.y, r)) return true;
     // Нижнее
     if (aabbVsCircle(ob.x, ob.bottomY, OBSTACLE_W, ob.bottomH, p.x, p.y, r)) return true;
     return false;
+  }
+
+  function hitsBone(p, bone) {
+    const r = pekineseRadius() + BONE_COL_R;
+    const dx = p.x - bone.x;
+    const dy = p.y - bone.y;
+    return dx * dx + dy * dy < r * r;
   }
 
   function aabbVsCircle(ax, ay, aw, ah, cx, cy, cr) {
@@ -305,13 +359,17 @@
       return;
     }
 
-    // Движение препятствий
+    // Движение препятствий и косточек
     for (const ob of Game.obstacles) {
       ob.x -= level.speed;
+    }
+    for (const b of Game.bones) {
+      b.x -= level.speed;
     }
     Game.scrollX += level.speed;
     Game.groundOffset += level.speed;
     Game.flapPhase += 0.2;
+    p.chompTime = Math.max(0, p.chompTime - dt);
 
     // Проверка пройденных и коллизий
     for (const ob of Game.obstacles) {
@@ -328,8 +386,17 @@
       }
     }
 
-    // Убираем ушедшие
+    // Сбор косточек
+    for (const b of Game.bones) {
+      if (!b.collected && hitsBone(p, b)) {
+        b.collected = true;
+        onBoneEaten();
+      }
+    }
+
+    // Убираем ушедшие и съеденные
     Game.obstacles = Game.obstacles.filter(o => o.x + OBSTACLE_W > -100);
+    Game.bones = Game.bones.filter(b => !b.collected && b.x > -80);
 
     // Спавн новых, пока не набрали нужного количества для уровня
     const remaining = level.obstacleCount - Game.obstaclesPassed - Game.obstacles.length;
@@ -417,9 +484,19 @@
       setState(STATE.FINAL);
     } else {
       document.getElementById('win-stats').textContent =
-        `Ты пролетел ${Game.score} препятствий. Пекинес получил косточку!`;
+        `Ты пролетел ${Game.score} препятствий и съел ${Game.bonesCollected} косточек. Пекинес получил главную косточку!`;
       setState(STATE.WIN);
     }
+  }
+
+  function onBoneEaten() {
+    const p = Game.pekinese;
+    if (!p) return;
+    Game.bonesCollected += 1;
+    p.sizeScale = Math.min(MAX_BONE_SCALE, p.sizeScale + BONE_GROWTH);
+    p.chompTime = 260;
+    Sound.score();
+    updateHud();
   }
 
   function onDeath() {
@@ -459,6 +536,15 @@
       Sprites.drawObstacle(ctx, ob.typeBottom, ob.x, ob.bottomY, OBSTACLE_W, ob.bottomH, false);
     }
 
+    // Летающие косточки (пикапы) — только в процессе полёта
+    if (Game.state === STATE.PLAYING || Game.state === STATE.PAUSED) {
+      for (const b of Game.bones) {
+        if (b.collected) continue;
+        const float = Math.sin((Game.timeMs + b.x * 3) / 220) * 4;
+        Sprites.drawBone(ctx, b.x, b.y + float, BONE_SIZE, b.rot);
+      }
+    }
+
     // Финальная сцена
     if (Game.state === STATE.CUTSCENE) {
       const cs = Game.cutscene;
@@ -473,11 +559,15 @@
     // Пекинес
     const p = Game.pekinese;
     if (p) {
+      // Лёгкая пульсация сразу после поедания косточки
+      const chompPulse = p.chompTime > 0 ? 1 + Math.sin((260 - p.chompTime) / 260 * Math.PI) * 0.08 : 1;
+      const scale = p.sizeScale * chompPulse;
       ctx.save();
       ctx.translate(p.x, p.y);
       ctx.rotate(p.rotation);
+      ctx.scale(scale, scale);
       Sprites.drawPekinese(ctx, PEKINESE_SIZE, Game.flapPhase + (p.flapTime > 0 ? 2 : 0));
-      // Косточка в зубах, если забрана
+      // Косточка в зубах, если забрана в финальной сцене
       if (Game.state === STATE.CUTSCENE && Game.cutscene.hasBone) {
         Sprites.drawBone(ctx, PEKINESE_SIZE * 0.35, -PEKINESE_SIZE * 0.05, 40);
       }
@@ -557,6 +647,8 @@
     document.getElementById('hud-level').textContent = String(Game.currentLevel + 1);
     document.getElementById('hud-score').textContent = String(Game.score);
     document.getElementById('hud-best').textContent = String(Game.save.best);
+    const bonesEl = document.getElementById('hud-bones');
+    if (bonesEl) bonesEl.textContent = String(Game.bonesCollected);
   }
 
   function renderLevelGrid() {
