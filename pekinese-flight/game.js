@@ -649,7 +649,7 @@
       }
     }, { passive: false });
 
-    // Touch / mouse на зоне тапа
+    // Touch / mouse на зоне тапа (любая кнопка мыши — левая, средняя, правая)
     const tap = document.getElementById('tap-zone');
     const handler = (e) => {
       e.preventDefault();
@@ -657,6 +657,15 @@
     };
     tap.addEventListener('touchstart', handler, { passive: false });
     tap.addEventListener('mousedown', handler);
+
+    // Правая кнопка мыши по всему окну — тоже flap во время игры.
+    // Отключаем браузерное контекстное меню, пока идёт уровень.
+    window.addEventListener('contextmenu', (e) => {
+      if (Game.state === STATE.PLAYING || Game.state === STATE.PAUSED) {
+        e.preventDefault();
+        if (Game.state === STATE.PLAYING) flap();
+      }
+    });
 
     // Аудио-контекст «будим» на первое взаимодействие
     const unlock = () => {
