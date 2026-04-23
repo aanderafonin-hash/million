@@ -181,16 +181,19 @@
   }
 
   // Build final list
+  // Каждый уровень: 10 косточек × 10 очков = 100 очков для прохождения.
+  const BONES_TO_WIN = 10;
+  const POINTS_PER_BONE = 10;
   const LEVELS = patterns.map(function (fn, i) {
     const level = i + 1;
-    // bones to win: grows from 3 up to 15
-    const bones = Math.min(15, 3 + Math.floor(level / 2));
     // speed: starts 180ms, ends ~85ms
     const tickMs = Math.max(85, 180 - (level - 1) * 3);
     return {
       id: level,
       name: names[i] || ('Уровень ' + level),
-      bonesToWin: bones,
+      bonesToWin: BONES_TO_WIN,
+      pointsToWin: BONES_TO_WIN * POINTS_PER_BONE, // 100
+      pointsPerBone: POINTS_PER_BONE, // 10
       tickMs: tickMs,
       obstacles: fn(),
       reward: rewardFor(level),
