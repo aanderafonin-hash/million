@@ -496,10 +496,12 @@
       state.score += 10;
       state.eatPulse = 1;
       spawnHearts(nx, ny);
+      // Speed boost: each bone accelerates the dachshund (with a sane minimum)
+      const minTick = Math.max(60, state.level.tickMs * 0.45);
+      state.tickMs = Math.max(minTick, state.tickMs - 5);
       hudBones.textContent = String(state.bonesEaten);
       hudScore.textContent = String(state.score);
       if (state.bonesEaten >= state.level.bonesToWin) {
-        // include all body cells as occupied before level complete animation
         return levelComplete();
       }
       state.bone = spawnBone();
@@ -633,33 +635,396 @@
     drawParticles();
   }
 
+  const INTERIOR_TYPES = ['toilet', 'sofa', 'table', 'armchair', 'slipper', 'boot', 'stool', 'nightstand', 'lamp', 'rug', 'bookshelf', 'tv'];
+
   function drawObstacle(gx, gy) {
     const x = gx * CELL;
     const y = gy * CELL;
-    // Wooden-stone block look
-    const g = ctx.createLinearGradient(x, y, x, y + CELL);
+    // Deterministic per-cell interior item
+    const hashK = ((gx * 73856093) ^ (gy * 19349663)) >>> 0;
+    const kind = INTERIOR_TYPES[hashK % INTERIOR_TYPES.length];
+
+    // Soft shadow under every item
+    ctx.save();
+    ctx.fillStyle = 'rgba(0,0,0,0.25)';
+    ctx.beginPath();
+    ctx.ellipse(x + CELL / 2, y + CELL - 3, CELL * 0.36, CELL * 0.07, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    ctx.save();
+    ctx.translate(x, y);
+    try {
+      switch (kind) {
+        case 'toilet': drawToilet(); break;
+        case 'sofa': drawSofa(); break;
+        case 'table': drawTable(); break;
+        case 'armchair': drawArmchair(); break;
+        case 'slipper': drawSlipper(); break;
+        case 'boot': drawBoot(); break;
+        case 'stool': drawStool(); break;
+        case 'nightstand': drawNightstand(); break;
+        case 'lamp': drawLamp(); break;
+        case 'rug': drawRug(); break;
+        case 'bookshelf': drawBookshelf(); break;
+        case 'tv': drawTv(); break;
+        default: drawFallbackBlock(); break;
+      }
+    } catch (e) {
+      // Fallback: if an interior item draw throws, render a wooden block so the obstacle is still visible
+      drawFallbackBlock();
+    }
+    ctx.restore();
+  }
+
+  function drawFallbackBlock() {
+    const g = ctx.createLinearGradient(0, 0, 0, CELL);
     g.addColorStop(0, '#6b4c2a');
     g.addColorStop(1, '#3d2a14');
     ctx.fillStyle = g;
-    ctx.fillRect(x + 1, y + 1, CELL - 2, CELL - 2);
-    // Highlight edge
+    ctx.fillRect(1, 1, CELL - 2, CELL - 2);
     ctx.fillStyle = 'rgba(255,255,255,0.14)';
-    ctx.fillRect(x + 3, y + 3, CELL - 6, 3);
-    // Inner outline
+    ctx.fillRect(3, 3, CELL - 6, 3);
     ctx.strokeStyle = '#1d1208';
     ctx.lineWidth = 2;
-    ctx.strokeRect(x + 1, y + 1, CELL - 2, CELL - 2);
-    // Rivets
-    ctx.fillStyle = '#c8a463';
-    dot(x + 6, y + 6, 2);
-    dot(x + CELL - 6, y + 6, 2);
-    dot(x + 6, y + CELL - 6, 2);
-    dot(x + CELL - 6, y + CELL - 6, 2);
+    ctx.strokeRect(1, 1, CELL - 2, CELL - 2);
   }
+
   function dot(x, y, r) {
     ctx.beginPath();
     ctx.arc(x, y, r, 0, Math.PI * 2);
     ctx.fill();
+  }
+
+  // ---- Interior items (drawn in a CELL×CELL cell with origin at 0,0) ----
+
+  function drawToilet() {
+    // Tank at top, bowl at bottom
+    ctx.fillStyle = '#f2f2f0';
+    ctx.strokeStyle = '#6a6a68';
+    ctx.lineWidth = 1.4;
+    // tank
+    roundRect(CELL * 0.18, CELL * 0.08, CELL * 0.64, CELL * 0.32, 3);
+    ctx.fill(); ctx.stroke();
+    // seat/bowl
+    ctx.beginPath();
+    ctx.ellipse(CELL * 0.5, CELL * 0.66, CELL * 0.34, CELL * 0.26, 0, 0, Math.PI * 2);
+    ctx.fill(); ctx.stroke();
+    // inner water
+    ctx.fillStyle = '#cde6f2';
+    ctx.beginPath();
+    ctx.ellipse(CELL * 0.5, CELL * 0.66, CELL * 0.22, CELL * 0.15, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // flush button
+    ctx.fillStyle = '#bbb';
+    ctx.fillRect(CELL * 0.44, CELL * 0.14, CELL * 0.12, CELL * 0.04);
+  }
+
+  function drawSofa() {
+    // Plush sofa with 2 cushions
+    ctx.fillStyle = '#8a3a3a';
+    ctx.strokeStyle = '#4a1c1c';
+    ctx.lineWidth = 1.4;
+    // backrest
+    roundRect(CELL * 0.06, CELL * 0.18, CELL * 0.88, CELL * 0.24, 5);
+    ctx.fill(); ctx.stroke();
+    // seat
+    roundRect(CELL * 0.06, CELL * 0.45, CELL * 0.88, CELL * 0.35, 5);
+    ctx.fill(); ctx.stroke();
+    // arms
+    roundRect(CELL * 0.02, CELL * 0.36, CELL * 0.12, CELL * 0.48, 4);
+    ctx.fill(); ctx.stroke();
+    roundRect(CELL * 0.86, CELL * 0.36, CELL * 0.12, CELL * 0.48, 4);
+    ctx.fill(); ctx.stroke();
+    // cushion divider
+    ctx.strokeStyle = '#4a1c1c';
+    ctx.beginPath();
+    ctx.moveTo(CELL * 0.5, CELL * 0.48);
+    ctx.lineTo(CELL * 0.5, CELL * 0.78);
+    ctx.stroke();
+    // feet
+    ctx.fillStyle = '#2a1608';
+    ctx.fillRect(CELL * 0.1, CELL * 0.83, CELL * 0.06, CELL * 0.08);
+    ctx.fillRect(CELL * 0.84, CELL * 0.83, CELL * 0.06, CELL * 0.08);
+  }
+
+  function drawTable() {
+    // Wooden table viewed top-down-ish
+    ctx.fillStyle = '#8b5a2b';
+    ctx.strokeStyle = '#3d230b';
+    ctx.lineWidth = 1.4;
+    roundRect(CELL * 0.08, CELL * 0.22, CELL * 0.84, CELL * 0.4, 4);
+    ctx.fill(); ctx.stroke();
+    // wood grain
+    ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(CELL * 0.15, CELL * 0.35); ctx.lineTo(CELL * 0.85, CELL * 0.35);
+    ctx.moveTo(CELL * 0.15, CELL * 0.48); ctx.lineTo(CELL * 0.85, CELL * 0.48);
+    ctx.stroke();
+    // legs
+    ctx.fillStyle = '#5a3412';
+    ctx.fillRect(CELL * 0.12, CELL * 0.6, CELL * 0.08, CELL * 0.32);
+    ctx.fillRect(CELL * 0.80, CELL * 0.6, CELL * 0.08, CELL * 0.32);
+  }
+
+  function drawArmchair() {
+    // Cozy padded armchair
+    ctx.fillStyle = '#4a6a3a';
+    ctx.strokeStyle = '#233320';
+    ctx.lineWidth = 1.4;
+    // backrest
+    roundRect(CELL * 0.15, CELL * 0.1, CELL * 0.7, CELL * 0.45, 8);
+    ctx.fill(); ctx.stroke();
+    // seat
+    roundRect(CELL * 0.15, CELL * 0.45, CELL * 0.7, CELL * 0.3, 4);
+    ctx.fill(); ctx.stroke();
+    // arms
+    roundRect(CELL * 0.04, CELL * 0.38, CELL * 0.16, CELL * 0.4, 4);
+    ctx.fill(); ctx.stroke();
+    roundRect(CELL * 0.8, CELL * 0.38, CELL * 0.16, CELL * 0.4, 4);
+    ctx.fill(); ctx.stroke();
+    // seat cushion highlight
+    ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+    ctx.beginPath();
+    ctx.moveTo(CELL * 0.2, CELL * 0.5); ctx.lineTo(CELL * 0.8, CELL * 0.5);
+    ctx.stroke();
+    // legs
+    ctx.fillStyle = '#2a1608';
+    ctx.fillRect(CELL * 0.18, CELL * 0.78, CELL * 0.06, CELL * 0.12);
+    ctx.fillRect(CELL * 0.76, CELL * 0.78, CELL * 0.06, CELL * 0.12);
+  }
+
+  function drawSlipper() {
+    // Fuzzy slipper (pink)
+    ctx.fillStyle = '#f28bb0';
+    ctx.strokeStyle = '#a84a6a';
+    ctx.lineWidth = 1.3;
+    ctx.beginPath();
+    // sole
+    ctx.ellipse(CELL * 0.5, CELL * 0.7, CELL * 0.38, CELL * 0.16, 0, 0, Math.PI * 2);
+    ctx.fill(); ctx.stroke();
+    // upper cover
+    ctx.beginPath();
+    ctx.moveTo(CELL * 0.12, CELL * 0.7);
+    ctx.quadraticCurveTo(CELL * 0.3, CELL * 0.25, CELL * 0.58, CELL * 0.35);
+    ctx.quadraticCurveTo(CELL * 0.85, CELL * 0.45, CELL * 0.88, CELL * 0.7);
+    ctx.closePath();
+    ctx.fillStyle = '#ffc0cb';
+    ctx.fill(); ctx.stroke();
+    // fluffy fur trim
+    ctx.fillStyle = '#ffe0ea';
+    for (let i = 0; i < 8; i++) {
+      const fx = CELL * (0.2 + i * 0.08);
+      ctx.beginPath();
+      ctx.arc(fx, CELL * (0.45 + Math.sin(i) * 0.04), CELL * 0.045, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  function drawBoot() {
+    // Tall leather boot
+    ctx.fillStyle = '#5a3412';
+    ctx.strokeStyle = '#2a1608';
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.moveTo(CELL * 0.3, CELL * 0.12);
+    ctx.lineTo(CELL * 0.62, CELL * 0.12);
+    ctx.lineTo(CELL * 0.62, CELL * 0.55);
+    ctx.lineTo(CELL * 0.88, CELL * 0.55);
+    ctx.quadraticCurveTo(CELL * 0.92, CELL * 0.82, CELL * 0.85, CELL * 0.85);
+    ctx.lineTo(CELL * 0.18, CELL * 0.85);
+    ctx.quadraticCurveTo(CELL * 0.14, CELL * 0.82, CELL * 0.18, CELL * 0.75);
+    ctx.lineTo(CELL * 0.3, CELL * 0.65);
+    ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    // laces
+    ctx.strokeStyle = '#c8a463';
+    ctx.lineWidth = 1;
+    for (let i = 0; i < 4; i++) {
+      const ly = CELL * (0.2 + i * 0.09);
+      ctx.beginPath();
+      ctx.moveTo(CELL * 0.32, ly); ctx.lineTo(CELL * 0.6, ly + CELL * 0.03);
+      ctx.stroke();
+    }
+    // sole
+    ctx.fillStyle = '#1a0f06';
+    ctx.fillRect(CELL * 0.18, CELL * 0.82, CELL * 0.7, CELL * 0.07);
+  }
+
+  function drawStool() {
+    // Wooden stool: round seat + legs
+    ctx.fillStyle = '#8b5a2b';
+    ctx.strokeStyle = '#3d230b';
+    ctx.lineWidth = 1.4;
+    // seat
+    ctx.beginPath();
+    ctx.ellipse(CELL * 0.5, CELL * 0.35, CELL * 0.32, CELL * 0.1, 0, 0, Math.PI * 2);
+    ctx.fill(); ctx.stroke();
+    // legs (4 visible splay)
+    ctx.strokeStyle = '#5a3412';
+    ctx.lineWidth = 2.5;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(CELL * 0.28, CELL * 0.38); ctx.lineTo(CELL * 0.2, CELL * 0.85);
+    ctx.moveTo(CELL * 0.45, CELL * 0.4); ctx.lineTo(CELL * 0.42, CELL * 0.88);
+    ctx.moveTo(CELL * 0.58, CELL * 0.4); ctx.lineTo(CELL * 0.62, CELL * 0.88);
+    ctx.moveTo(CELL * 0.74, CELL * 0.38); ctx.lineTo(CELL * 0.82, CELL * 0.85);
+    ctx.stroke();
+  }
+
+  function drawNightstand() {
+    // Small cabinet with drawer
+    ctx.fillStyle = '#b88a4a';
+    ctx.strokeStyle = '#5a3412';
+    ctx.lineWidth = 1.4;
+    roundRect(CELL * 0.12, CELL * 0.2, CELL * 0.76, CELL * 0.7, 3);
+    ctx.fill(); ctx.stroke();
+    // drawer line
+    ctx.beginPath();
+    ctx.moveTo(CELL * 0.14, CELL * 0.44);
+    ctx.lineTo(CELL * 0.86, CELL * 0.44);
+    ctx.stroke();
+    // handle
+    ctx.fillStyle = '#2a1608';
+    ctx.beginPath();
+    ctx.arc(CELL * 0.5, CELL * 0.35, CELL * 0.04, 0, Math.PI * 2);
+    ctx.fill();
+    // bottom drawer detail
+    ctx.beginPath();
+    ctx.moveTo(CELL * 0.14, CELL * 0.67);
+    ctx.lineTo(CELL * 0.86, CELL * 0.67);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(CELL * 0.5, CELL * 0.55, CELL * 0.03, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  function drawLamp() {
+    // Floor lamp with shade
+    ctx.fillStyle = '#e6c868';
+    ctx.strokeStyle = '#8a6a20';
+    ctx.lineWidth = 1.4;
+    // shade
+    ctx.beginPath();
+    ctx.moveTo(CELL * 0.28, CELL * 0.32);
+    ctx.lineTo(CELL * 0.72, CELL * 0.32);
+    ctx.lineTo(CELL * 0.82, CELL * 0.08);
+    ctx.lineTo(CELL * 0.18, CELL * 0.08);
+    ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    // shade bottom
+    ctx.strokeStyle = '#c89840';
+    ctx.beginPath();
+    ctx.moveTo(CELL * 0.28, CELL * 0.32);
+    ctx.lineTo(CELL * 0.72, CELL * 0.32);
+    ctx.stroke();
+    // pole
+    ctx.strokeStyle = '#2a1608';
+    ctx.lineWidth = 2.4;
+    ctx.beginPath();
+    ctx.moveTo(CELL * 0.5, CELL * 0.34);
+    ctx.lineTo(CELL * 0.5, CELL * 0.82);
+    ctx.stroke();
+    // base
+    ctx.fillStyle = '#2a1608';
+    ctx.beginPath();
+    ctx.ellipse(CELL * 0.5, CELL * 0.86, CELL * 0.18, CELL * 0.05, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // soft light glow around shade
+    const glow = ctx.createRadialGradient(CELL * 0.5, CELL * 0.2, 3, CELL * 0.5, CELL * 0.2, CELL * 0.45);
+    glow.addColorStop(0, 'rgba(255, 240, 150, 0.35)');
+    glow.addColorStop(1, 'rgba(255, 240, 150, 0)');
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, CELL, CELL);
+  }
+
+  function drawRug() {
+    // Rolled/folded rug
+    ctx.save();
+    ctx.translate(CELL * 0.5, CELL * 0.5);
+    ctx.rotate(-0.35);
+    const w = CELL * 0.88;
+    const h = CELL * 0.4;
+    ctx.fillStyle = '#a83a3a';
+    ctx.strokeStyle = '#4a1c1c';
+    ctx.lineWidth = 1.2;
+    roundRect(-w / 2, -h / 2, w, h, 3);
+    ctx.fill(); ctx.stroke();
+    // pattern stripes
+    ctx.strokeStyle = '#f2d8a0';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(-w / 2 + 3, -h * 0.25); ctx.lineTo(w / 2 - 3, -h * 0.25);
+    ctx.moveTo(-w / 2 + 3, 0); ctx.lineTo(w / 2 - 3, 0);
+    ctx.moveTo(-w / 2 + 3, h * 0.25); ctx.lineTo(w / 2 - 3, h * 0.25);
+    ctx.stroke();
+    // fringes on both ends
+    ctx.strokeStyle = '#f2d8a0';
+    ctx.beginPath();
+    for (let i = 0; i < 6; i++) {
+      const fy = -h / 2 + i * (h / 6) + 2;
+      ctx.moveTo(-w / 2, fy); ctx.lineTo(-w / 2 - 3, fy);
+      ctx.moveTo(w / 2, fy); ctx.lineTo(w / 2 + 3, fy);
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawBookshelf() {
+    // Bookshelf with colorful books
+    ctx.fillStyle = '#6a4a2a';
+    ctx.strokeStyle = '#2a1608';
+    ctx.lineWidth = 1.4;
+    roundRect(CELL * 0.08, CELL * 0.08, CELL * 0.84, CELL * 0.84, 2);
+    ctx.fill(); ctx.stroke();
+    // two shelves
+    ctx.beginPath();
+    ctx.moveTo(CELL * 0.1, CELL * 0.37); ctx.lineTo(CELL * 0.9, CELL * 0.37);
+    ctx.moveTo(CELL * 0.1, CELL * 0.66); ctx.lineTo(CELL * 0.9, CELL * 0.66);
+    ctx.stroke();
+    // books on each shelf
+    const bookColors = ['#c23a3a', '#3a7ac2', '#c2a23a', '#3ac264', '#a03ac2'];
+    const shelves = [CELL * 0.12, CELL * 0.41, CELL * 0.7];
+    for (const sy of shelves) {
+      for (let i = 0; i < 5; i++) {
+        ctx.fillStyle = bookColors[(i + Math.round(sy * 7)) % bookColors.length];
+        const bx = CELL * 0.12 + i * CELL * 0.155;
+        ctx.fillRect(bx, sy, CELL * 0.14, CELL * 0.22);
+        ctx.strokeStyle = '#1a0f06';
+        ctx.lineWidth = 0.8;
+        ctx.strokeRect(bx, sy, CELL * 0.14, CELL * 0.22);
+      }
+    }
+  }
+
+  function drawTv() {
+    // Flat-screen TV
+    ctx.fillStyle = '#1a1a1a';
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 1.4;
+    roundRect(CELL * 0.06, CELL * 0.18, CELL * 0.88, CELL * 0.5, 3);
+    ctx.fill(); ctx.stroke();
+    // screen gradient
+    const sg = ctx.createLinearGradient(CELL * 0.1, CELL * 0.22, CELL * 0.9, CELL * 0.64);
+    sg.addColorStop(0, '#3a6abf');
+    sg.addColorStop(0.5, '#7ac0f2');
+    sg.addColorStop(1, '#2a4a8a');
+    ctx.fillStyle = sg;
+    ctx.fillRect(CELL * 0.11, CELL * 0.22, CELL * 0.78, CELL * 0.42);
+    // reflection
+    ctx.fillStyle = 'rgba(255,255,255,0.18)';
+    ctx.beginPath();
+    ctx.moveTo(CELL * 0.11, CELL * 0.22);
+    ctx.lineTo(CELL * 0.4, CELL * 0.22);
+    ctx.lineTo(CELL * 0.2, CELL * 0.6);
+    ctx.lineTo(CELL * 0.11, CELL * 0.55);
+    ctx.closePath();
+    ctx.fill();
+    // stand
+    ctx.fillStyle = '#333';
+    ctx.fillRect(CELL * 0.42, CELL * 0.68, CELL * 0.16, CELL * 0.1);
+    ctx.fillRect(CELL * 0.3, CELL * 0.78, CELL * 0.4, CELL * 0.05);
   }
 
   function drawBone(gx, gy, ts) {
@@ -704,21 +1069,120 @@
     const body = state.dog;
     if (body.length === 0) return;
 
-    // Shadow
-    ctx.save();
-    ctx.fillStyle = 'rgba(0,0,0,0.18)';
-    for (let i = 0; i < body.length; i++) {
-      const p = body[i];
-      ctx.beginPath();
-      ctx.ellipse(p.x * CELL + CELL / 2, p.y * CELL + CELL * 0.82, CELL * 0.40, CELL * 0.16, 0, 0, Math.PI * 2);
-      ctx.fill();
+    // Points for the continuous body polyline (tail to head)
+    // We build it reversed so the line flows from tail up to head
+    const pts = [];
+    for (let i = body.length - 1; i >= 0; i--) {
+      pts.push({
+        x: body[i].x * CELL + CELL / 2,
+        y: body[i].y * CELL + CELL / 2,
+      });
     }
+    // Extend head point slightly forward so body visually meets the head
+    const headPt = pts[pts.length - 1];
+    pts.push({
+      x: headPt.x + state.dir.x * CELL * 0.25,
+      y: headPt.y + state.dir.y * CELL * 0.25,
+    });
+
+    // Soft shadow under the whole body
+    ctx.save();
+    ctx.strokeStyle = 'rgba(0,0,0,0.22)';
+    ctx.lineWidth = CELL * 0.66;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x + 2, pts[0].y + CELL * 0.18);
+    for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x + 2, pts[i].y + CELL * 0.18);
+    ctx.stroke();
     ctx.restore();
 
-    for (let i = body.length - 1; i >= 1; i--) {
-      drawBodySegment(body[i], i, body.length, ts);
-    }
+    // Body layers (concentric strokes = realistic dachshund cross-section):
+    // 1. Dark outline
+    strokeBody(pts, CELL * 0.72, '#2a1608');
+    // 2. Tan belly/flank
+    strokeBody(pts, CELL * 0.64, '#c8944c');
+    // 3. Dark chepprak saddle down the middle (top of body)
+    strokeBody(pts, CELL * 0.42, '#3a1f0a');
+    // 4. Subtle highlight
+    strokeBody(pts, CELL * 0.14, 'rgba(255, 220, 180, 0.22)');
+
+    // Paws along the body
+    drawPaws(body, ts);
+
+    // Head and tail on top
+    drawTailRibbon(body, ts);
     drawHead(body[0], ts);
+  }
+
+  function strokeBody(pts, width, color) {
+    ctx.save();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = width;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawPaws(body, ts) {
+    const moving = (state.running && !state.paused) ? 1 : 0;
+    const phase = (ts || 0) * 0.022;
+    // Paws are placed at body segment positions (skip head, skip tail-most)
+    // Dachshunds have short legs — we render compact paws.
+    for (let i = 1; i < body.length; i++) {
+      if (i % 2 !== 1) continue; // every other segment
+      if (i >= body.length - 1) continue; // skip tail segment
+      const p = body[i];
+      const cx = p.x * CELL + CELL / 2;
+      const cy = p.y * CELL + CELL / 2;
+      // Determine local side axis: perpendicular to incoming direction
+      const inDir = (function () {
+        const prev = body[i - 1];
+        const cur = body[i];
+        return { x: prev.x - cur.x, y: prev.y - cur.y };
+      })();
+      const sideX = -inDir.y;
+      const sideY = inDir.x;
+
+      const bob = moving ? Math.sin(phase + i * 0.9) * 1.6 : 0;
+      const bob2 = moving ? Math.sin(phase + i * 0.9 + Math.PI) * 1.6 : 0;
+
+      drawPaw(cx + sideX * CELL * 0.28, cy + sideY * CELL * 0.28 + bob);
+      drawPaw(cx - sideX * CELL * 0.28, cy - sideY * CELL * 0.28 + bob2);
+    }
+  }
+
+  function drawPaw(cx, cy) {
+    // Small paw: dark pad with pink underside
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.fillStyle = '#2a1608';
+    ctx.strokeStyle = '#140a04';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, CELL * 0.13, CELL * 0.09, 0, 0, Math.PI * 2);
+    ctx.fill(); ctx.stroke();
+    // pink pad
+    ctx.fillStyle = '#ff9eb0';
+    ctx.beginPath();
+    ctx.ellipse(0, CELL * 0.02, CELL * 0.08, CELL * 0.045, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // tiny claws
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    ctx.moveTo(-CELL * 0.06, -CELL * 0.04);
+    ctx.lineTo(-CELL * 0.09, -CELL * 0.075);
+    ctx.moveTo(0, -CELL * 0.05);
+    ctx.lineTo(0, -CELL * 0.095);
+    ctx.moveTo(CELL * 0.06, -CELL * 0.04);
+    ctx.lineTo(CELL * 0.09, -CELL * 0.075);
+    ctx.stroke();
+    ctx.restore();
   }
 
   function segIn(index) {
@@ -727,143 +1191,80 @@
     return prev ? { x: prev.x - cur.x, y: prev.y - cur.y } : state.dir;
   }
 
-  function drawBodySegment(p, index, total, ts) {
-    const isTail = index === total - 1;
-    const inDir = segIn(index);
-    const horizontal = inDir.x !== 0;
+  function drawTailRibbon(body, ts) {
+    // Draw a long tapered wagging tail from the last body segment
+    const tailSeg = body[body.length - 1];
+    const prevSeg = body[body.length - 2] || tailSeg;
+    // Direction from prev -> tail (i.e., which way the tail sticks out from body)
+    const outDir = {
+      x: tailSeg.x - prevSeg.x,
+      y: tailSeg.y - prevSeg.y,
+    };
+    // If tail segment has no direction (1-cell body edge), fall back to opposite of head dir
+    if (outDir.x === 0 && outDir.y === 0) {
+      outDir.x = -state.dir.x;
+      outDir.y = -state.dir.y;
+    }
 
-    const cx = p.x * CELL + CELL / 2;
-    // Hopping gait: body bobs up/down per segment
-    const moving = (state.running && !state.paused) ? 1 : 0;
-    const bob = moving ? Math.sin((ts || 0) * 0.012 + index * 0.7) * 1.4 : 0;
-    const cy = p.y * CELL + CELL / 2 + bob;
+    const baseX = tailSeg.x * CELL + CELL / 2;
+    const baseY = tailSeg.y * CELL + CELL / 2;
 
-    ctx.save();
-    ctx.translate(cx, cy);
-    if (!horizontal) ctx.rotate(Math.PI / 2);
-
-    const w = CELL * 1.02;
-    const h = CELL * 0.64;
-
-    // Belly (light tan pill beneath the saddle)
-    roundRect(-w / 2, -h / 2, w, h, h / 2);
-    const bellyGrad = ctx.createLinearGradient(0, -h / 2, 0, h / 2);
-    bellyGrad.addColorStop(0, '#c9914c');
-    bellyGrad.addColorStop(1, '#8a5a22');
-    ctx.fillStyle = bellyGrad;
-    ctx.fill();
-    ctx.strokeStyle = '#4d2e10';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-
-    // Saddle (dark chocolate patch on top = classic black-and-tan dachshund)
-    ctx.save();
-    ctx.beginPath();
-    roundRect(-w / 2, -h / 2, w, h, h / 2);
-    ctx.clip();
-    const saddleGrad = ctx.createLinearGradient(0, -h / 2, 0, 0);
-    saddleGrad.addColorStop(0, '#2a1608');
-    saddleGrad.addColorStop(1, '#5a3412');
-    ctx.fillStyle = saddleGrad;
-    // saddle covers top portion and tapers at the ends
-    const sx = -w / 2 + 4;
-    const sw = w - 8;
-    const sh = h * 0.55;
-    roundRect(sx, -h / 2 + 1, sw, sh, sh * 0.5);
-    ctx.fill();
-    ctx.restore();
-
-    // Subtle body outline again on top
-    roundRect(-w / 2, -h / 2, w, h, h / 2);
-    ctx.strokeStyle = '#3d230b';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-
-    if (!isTail && index % 2 === 1) drawLegs(h, ts, index);
-    if (isTail) drawTail(w, h, ts);
-    ctx.restore();
-  }
-
-  function drawLegs(bodyH, ts, index) {
-    const speed = (state.running && !state.paused) ? 1 : 0;
-    // Running animation: alternate legs up/down
-    const phase = Math.sin((ts || 0) * 0.022 + index * 0.9) * 3 * speed;
-    ctx.save();
-    ctx.fillStyle = '#4a2a10';
-    ctx.strokeStyle = '#2a1608';
-    ctx.lineWidth = 1.5;
-    const legW = CELL * 0.18;
-    const legH = CELL * 0.28;
-    const y = bodyH / 2 - 2;
-
-    // Left leg
-    roundRect(-CELL * 0.28 - legW / 2, y + phase, legW, legH, 3);
-    ctx.fill(); ctx.stroke();
-    // Right leg (opposite phase)
-    roundRect(CELL * 0.28 - legW / 2, y - phase, legW, legH, 3);
-    ctx.fill(); ctx.stroke();
-
-    // Paw shadows
-    ctx.fillStyle = 'rgba(0,0,0,0.35)';
-    ctx.beginPath();
-    ctx.ellipse(-CELL * 0.28, y + legH + phase + 1, legW * 0.7, 2.5, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.ellipse(CELL * 0.28, y + legH - phase + 1, legW * 0.7, 2.5, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Pink paw pads (bottom of each paw)
-    ctx.fillStyle = '#ff9eb0';
-    ctx.strokeStyle = '#c06a7a';
-    ctx.lineWidth = 0.8;
-    ctx.beginPath();
-    ctx.ellipse(-CELL * 0.28, y + legH - 1 + phase, legW * 0.45, 2.2, 0, 0, Math.PI * 2);
-    ctx.fill(); ctx.stroke();
-    ctx.beginPath();
-    ctx.ellipse(CELL * 0.28, y + legH - 1 - phase, legW * 0.45, 2.2, 0, 0, Math.PI * 2);
-    ctx.fill(); ctx.stroke();
-    ctx.restore();
-  }
-
-  function drawTail(w, h, ts) {
-    // Very happy wagging tail: big swing when running, extra wag on eat
     const speed = (state.running && !state.paused) ? 1 : 0.25;
-    const wagAmount = 0.65 + state.eatPulse * 1.2;
+    const wagAmount = 0.75 + state.eatPulse * 1.2;
     const wagFreq = 0.028 + state.eatPulse * 0.02;
     const wag = Math.sin((ts || 0) * wagFreq) * wagAmount * speed;
-    const baseX = -w / 2 + 2;
-    ctx.save();
-    ctx.translate(baseX, 0);
-    ctx.rotate(wag);
 
-    ctx.fillStyle = '#5a3412';
-    ctx.strokeStyle = '#2a1608';
-    ctx.lineWidth = 2;
-    // Curved tail body
+    ctx.save();
+    ctx.translate(baseX, baseY);
+    const baseAngle = Math.atan2(outDir.y, outDir.x);
+    ctx.rotate(baseAngle + wag);
+
+    // Long thin tapered tail (like a stick)
+    const tailLen = CELL * 1.25;
+    const rootW = CELL * 0.32;
+    const tipW = CELL * 0.08;
+
+    // Dark outline
+    ctx.fillStyle = '#2a1608';
+    ctx.strokeStyle = '#140a04';
+    ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.moveTo(0, -h * 0.22);
-    ctx.quadraticCurveTo(-CELL * 0.38, -h * 0.52, -CELL * 0.48, -h * 0.05);
-    ctx.quadraticCurveTo(-CELL * 0.32, h * 0.22, 0, h * 0.22);
+    ctx.moveTo(0, -rootW / 2);
+    // Curved tail with gentle upward bend
+    ctx.quadraticCurveTo(tailLen * 0.55, -rootW * 0.7, tailLen, -tipW / 2);
+    ctx.quadraticCurveTo(tailLen + tipW * 0.9, 0, tailLen, tipW / 2);
+    ctx.quadraticCurveTo(tailLen * 0.55, rootW * 0.7, 0, rootW / 2);
     ctx.closePath();
     ctx.fill();
     ctx.stroke();
 
-    // Tail tip fluff (tan underside visible)
-    ctx.fillStyle = '#c9914c';
+    // Tan stripe down the underside
+    ctx.fillStyle = '#c8944c';
     ctx.beginPath();
-    ctx.ellipse(-CELL * 0.44, h * 0.02, CELL * 0.08, CELL * 0.06, 0, 0, Math.PI * 2);
-    ctx.fill(); ctx.stroke();
+    ctx.moveTo(tailLen * 0.1, rootW * 0.1);
+    ctx.quadraticCurveTo(tailLen * 0.55, rootW * 0.5, tailLen * 0.9, tipW * 0.3);
+    ctx.quadraticCurveTo(tailLen * 0.55, rootW * 0.15, tailLen * 0.1, rootW * 0.1);
+    ctx.closePath();
+    ctx.fill();
 
-    // Motion lines while wagging hard
-    if (Math.abs(wag) > 0.4 && speed > 0.5) {
-      ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+    // Subtle highlight along the top edge
+    ctx.strokeStyle = 'rgba(255, 220, 180, 0.25)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(tailLen * 0.1, -rootW * 0.25);
+    ctx.quadraticCurveTo(tailLen * 0.55, -rootW * 0.5, tailLen * 0.9, -tipW * 0.3);
+    ctx.stroke();
+
+    // Motion lines when wagging hard
+    if (Math.abs(wag) > 0.45 && speed > 0.5) {
+      ctx.strokeStyle = 'rgba(255,255,255,0.5)';
       ctx.lineWidth = 1.5;
       ctx.lineCap = 'round';
       ctx.beginPath();
-      ctx.moveTo(-CELL * 0.55, -h * 0.05);
-      ctx.lineTo(-CELL * 0.70, -h * 0.20);
-      ctx.moveTo(-CELL * 0.55, h * 0.05);
-      ctx.lineTo(-CELL * 0.70, h * 0.20);
+      ctx.moveTo(tailLen * 0.35, -rootW * 0.8);
+      ctx.lineTo(tailLen * 0.55, -rootW * 1.3);
+      ctx.moveTo(tailLen * 0.35, rootW * 0.8);
+      ctx.lineTo(tailLen * 0.55, rootW * 1.3);
       ctx.stroke();
     }
     ctx.restore();
@@ -872,9 +1273,8 @@
   function drawHead(p, ts) {
     const d = state.dir;
     const cx = p.x * CELL + CELL / 2;
-    // Head also bobs with gait
     const moving = (state.running && !state.paused) ? 1 : 0;
-    const headBob = moving ? Math.sin((ts || 0) * 0.012) * 1.2 : 0;
+    const headBob = moving ? Math.sin((ts || 0) * 0.012) * 1.0 : 0;
     const cy = p.y * CELL + CELL / 2 + headBob;
 
     ctx.save();
@@ -882,249 +1282,240 @@
     const angle = Math.atan2(d.y, d.x);
     ctx.rotate(angle);
 
-    const headW = CELL * 1.1;
-    const headH = CELL * 0.76;
+    // Realistic dachshund head: narrow skull, long snout
+    const skullW = CELL * 0.62;
+    const skullH = CELL * 0.70;
+    const snoutW = CELL * 0.72;
+    const snoutH = CELL * 0.34;
 
-    // Floppy ears flap more while running, big bounce on eat
-    const earFreq = 0.02 + state.eatPulse * 0.015;
-    const earWag = Math.sin((ts || 0) * earFreq) * (0.12 + state.eatPulse * 0.15) * moving;
+    // --- Ears (floppy, long — classic dachshund) ---
+    const earFreq = 0.018 + state.eatPulse * 0.012;
+    const earWag = Math.sin((ts || 0) * earFreq) * (0.10 + state.eatPulse * 0.12) * moving;
 
     // Top ear
     ctx.fillStyle = '#2a1608';
     ctx.strokeStyle = '#140a04';
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 1.8;
     ctx.save();
-    ctx.translate(-headW * 0.1, -headH * 0.38);
-    ctx.rotate(-0.45 + earWag);
+    ctx.translate(-skullW * 0.25, -skullH * 0.42);
+    ctx.rotate(-0.35 + earWag);
     ctx.beginPath();
-    ctx.ellipse(0, CELL * 0.26, CELL * 0.19, CELL * 0.38, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, CELL * 0.28, CELL * 0.17, CELL * 0.36, 0, 0, Math.PI * 2);
     ctx.fill(); ctx.stroke();
-    // Inner ear (pink)
-    ctx.fillStyle = '#e89a9c';
+    ctx.fillStyle = '#b27670';
     ctx.beginPath();
-    ctx.ellipse(0, CELL * 0.3, CELL * 0.08, CELL * 0.22, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, CELL * 0.32, CELL * 0.06, CELL * 0.22, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
 
     // Bottom ear
     ctx.fillStyle = '#2a1608';
     ctx.save();
-    ctx.translate(-headW * 0.1, headH * 0.38);
-    ctx.rotate(0.45 - earWag);
+    ctx.translate(-skullW * 0.25, skullH * 0.42);
+    ctx.rotate(0.35 - earWag);
     ctx.beginPath();
-    ctx.ellipse(0, -CELL * 0.26, CELL * 0.19, CELL * 0.38, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, -CELL * 0.28, CELL * 0.17, CELL * 0.36, 0, 0, Math.PI * 2);
     ctx.fill(); ctx.stroke();
-    ctx.fillStyle = '#e89a9c';
+    ctx.fillStyle = '#b27670';
     ctx.beginPath();
-    ctx.ellipse(0, -CELL * 0.3, CELL * 0.08, CELL * 0.22, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, -CELL * 0.32, CELL * 0.06, CELL * 0.22, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
 
-    // Head base (tan)
-    const gradH = ctx.createLinearGradient(0, -headH / 2, 0, headH / 2);
-    gradH.addColorStop(0, '#c9914c');
-    gradH.addColorStop(1, '#8a5a22');
-    ctx.fillStyle = gradH;
-    ctx.strokeStyle = '#3d230b';
-    ctx.lineWidth = 2;
-    roundRect(-headW * 0.45, -headH / 2, headW * 0.75, headH, headH / 2);
+    // --- Skull base (dark saddle colour on top) ---
+    ctx.fillStyle = '#3a1f0a';
+    ctx.strokeStyle = '#2a1608';
+    ctx.lineWidth = 1.8;
+    ctx.beginPath();
+    ctx.ellipse(-skullW * 0.15, 0, skullW * 0.55, skullH / 2, 0, 0, Math.PI * 2);
     ctx.fill(); ctx.stroke();
 
-    // Dark forehead patch (saddle continues onto head)
+    // Cheeks (tan, lower half)
     ctx.save();
     ctx.beginPath();
-    roundRect(-headW * 0.45, -headH / 2, headW * 0.75, headH, headH / 2);
+    ctx.ellipse(-skullW * 0.15, 0, skullW * 0.55, skullH / 2, 0, 0, Math.PI * 2);
     ctx.clip();
-    ctx.fillStyle = '#2a1608';
+    ctx.fillStyle = '#c8944c';
     ctx.beginPath();
-    ctx.ellipse(-headW * 0.18, -headH * 0.28, headW * 0.3, headH * 0.32, 0, 0, Math.PI * 2);
+    ctx.ellipse(-skullW * 0.05, skullH * 0.15, skullW * 0.6, skullH * 0.35, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(-skullW * 0.05, -skullH * 0.15, skullW * 0.6, skullH * 0.35, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
 
-    // Snout (slightly lighter tan)
-    const snoutW = CELL * 0.58;
-    const snoutH = CELL * 0.44;
-    ctx.fillStyle = '#d9a560';
-    ctx.strokeStyle = '#3d230b';
-    ctx.lineWidth = 2;
-    roundRect(headW * 0.08, -snoutH / 2, snoutW, snoutH, snoutH / 2);
+    // --- Long snout ---
+    // Snout tapers toward the nose
+    ctx.fillStyle = '#b7853f';
+    ctx.strokeStyle = '#2a1608';
+    ctx.lineWidth = 1.8;
+    ctx.beginPath();
+    const sX = skullW * 0.25;
+    ctx.moveTo(sX, -snoutH * 0.55);
+    ctx.lineTo(sX + snoutW * 0.85, -snoutH * 0.40);
+    // round nose tip
+    ctx.quadraticCurveTo(sX + snoutW + 2, -snoutH * 0.18, sX + snoutW + 2, 0);
+    ctx.quadraticCurveTo(sX + snoutW + 2, snoutH * 0.18, sX + snoutW * 0.85, snoutH * 0.40);
+    ctx.lineTo(sX, snoutH * 0.55);
+    ctx.closePath();
     ctx.fill(); ctx.stroke();
 
-    // Blush / pink cheeks on snout base
-    ctx.fillStyle = 'rgba(255, 120, 140, 0.55)';
+    // Top ridge (darker stripe from skull toward nose)
+    ctx.save();
     ctx.beginPath();
-    ctx.ellipse(headW * 0.18, -snoutH * 0.18, CELL * 0.1, CELL * 0.07, 0, 0, Math.PI * 2);
+    ctx.moveTo(sX, -snoutH * 0.55);
+    ctx.lineTo(sX + snoutW * 0.85, -snoutH * 0.40);
+    ctx.quadraticCurveTo(sX + snoutW + 2, -snoutH * 0.18, sX + snoutW + 2, 0);
+    ctx.quadraticCurveTo(sX + snoutW * 0.85, -snoutH * 0.1, sX + snoutW * 0.3, -snoutH * 0.2);
+    ctx.lineTo(sX, -snoutH * 0.3);
+    ctx.closePath();
+    ctx.fillStyle = '#6a3f17';
     ctx.fill();
+    ctx.restore();
+
+    // Subtle pink cheek patch (far subtler than before)
+    ctx.fillStyle = 'rgba(220, 130, 130, 0.25)';
     ctx.beginPath();
-    ctx.ellipse(headW * 0.18, snoutH * 0.18, CELL * 0.1, CELL * 0.07, 0, 0, Math.PI * 2);
+    ctx.ellipse(sX + snoutW * 0.25, snoutH * 0.15, CELL * 0.08, CELL * 0.05, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // Nose (bigger, shinier)
-    ctx.fillStyle = '#1a0f06';
+    // Nose (realistic — medium size)
+    ctx.fillStyle = '#0e0604';
     ctx.strokeStyle = '#000';
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    ctx.ellipse(sX + snoutW - 0.5, 0, CELL * 0.10, CELL * 0.085, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Nostril slits
+    ctx.strokeStyle = '#2a1608';
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.ellipse(headW * 0.08 + snoutW - 2, 0, CELL * 0.12, CELL * 0.10, 0, 0, Math.PI * 2);
-    ctx.fill();
-    // Nose big highlight
-    ctx.fillStyle = '#fff';
+    ctx.moveTo(sX + snoutW - 1, -CELL * 0.025);
+    ctx.quadraticCurveTo(sX + snoutW + 1, -CELL * 0.01, sX + snoutW - 1, CELL * 0.005);
+    ctx.moveTo(sX + snoutW - 1, CELL * 0.025);
+    ctx.quadraticCurveTo(sX + snoutW + 1, CELL * 0.03, sX + snoutW - 1, CELL * 0.045);
+    ctx.stroke();
+    // Single small shine on nose
+    ctx.fillStyle = 'rgba(255,255,255,0.55)';
     ctx.beginPath();
-    ctx.ellipse(headW * 0.08 + snoutW - 4, -CELL * 0.035, CELL * 0.04, CELL * 0.025, 0, 0, Math.PI * 2);
-    ctx.fill();
-    // Nose small highlight
-    ctx.fillStyle = 'rgba(255,255,255,0.7)';
-    ctx.beginPath();
-    ctx.ellipse(headW * 0.08 + snoutW - 1, CELL * 0.025, CELL * 0.015, CELL * 0.012, 0, 0, Math.PI * 2);
+    ctx.ellipse(sX + snoutW - 3, -CELL * 0.04, CELL * 0.025, CELL * 0.018, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // Mouth smile
-    ctx.strokeStyle = '#3d230b';
-    ctx.lineWidth = 2;
+    // Mouth line
+    ctx.strokeStyle = '#2a1608';
+    ctx.lineWidth = 1.6;
     ctx.lineCap = 'round';
     ctx.beginPath();
-    ctx.moveTo(headW * 0.08 + snoutW * 0.2, snoutH * 0.32);
-    ctx.quadraticCurveTo(headW * 0.08 + snoutW * 0.55, snoutH * 0.58, headW * 0.08 + snoutW * 0.88, snoutH * 0.28);
+    ctx.moveTo(sX + snoutW * 0.35, snoutH * 0.32);
+    ctx.quadraticCurveTo(sX + snoutW * 0.65, snoutH * 0.48, sX + snoutW * 0.95, snoutH * 0.25);
     ctx.stroke();
 
-    // Tongue (drops out when happy/running, extra long on eat)
-    const tongueOut = moving * 0.6 + state.eatPulse * 0.6 + Math.max(0, Math.sin((ts || 0) * 0.004)) * 0.15;
-    if (tongueOut > 0.1) {
-      const tongueLen = CELL * 0.18 * tongueOut;
-      const tongueW = CELL * 0.08;
-      const tx = headW * 0.08 + snoutW * 0.62;
-      const ty = snoutH * 0.45;
-      ctx.fillStyle = '#f36a86';
-      ctx.strokeStyle = '#b84060';
-      ctx.lineWidth = 1.2;
+    // Tongue — smaller and only when moving/eating
+    const tongueOut = moving * 0.4 + state.eatPulse * 0.8;
+    if (tongueOut > 0.15) {
+      const tongueLen = CELL * 0.14 * tongueOut;
+      const tongueW = CELL * 0.07;
+      const tx = sX + snoutW * 0.72;
+      const ty = snoutH * 0.42;
+      ctx.fillStyle = '#e67a8e';
+      ctx.strokeStyle = '#a84a5e';
+      ctx.lineWidth = 1;
       ctx.save();
       ctx.translate(tx, ty);
-      // tongue with a midline fold
       roundRect(-tongueW / 2, 0, tongueW, tongueLen, tongueW * 0.5);
       ctx.fill(); ctx.stroke();
-      ctx.strokeStyle = '#b84060';
       ctx.beginPath();
-      ctx.moveTo(0, tongueLen * 0.2);
-      ctx.lineTo(0, tongueLen * 0.95);
+      ctx.moveTo(0, tongueLen * 0.25);
+      ctx.lineTo(0, tongueLen * 0.9);
       ctx.stroke();
       ctx.restore();
     }
 
-    // Big puppy eye
-    drawPuppyEye(headW * 0.02, -headH * 0.14, CELL * 0.21, ts);
+    // Realistic eye (medium-sized, one highlight)
+    drawRealisticEye(-skullW * 0.02, -skullH * 0.2, CELL * 0.12, ts);
 
-    // Little eyebrow dot for expressive look (the head saddle hides most of this)
-    ctx.fillStyle = 'rgba(42,22,8,0.6)';
+    // Brow ridge (subtle crease above the eye — more dog-like)
+    ctx.strokeStyle = '#1a0f06';
+    ctx.lineWidth = 1.2;
+    ctx.lineCap = 'round';
     ctx.beginPath();
-    ctx.ellipse(headW * 0.05, -headH * 0.32, CELL * 0.07, CELL * 0.03, -0.15, 0, Math.PI * 2);
+    ctx.moveTo(-skullW * 0.18, -skullH * 0.34);
+    ctx.quadraticCurveTo(-skullW * 0.02, -skullH * 0.40, skullW * 0.14, -skullH * 0.32);
+    ctx.stroke();
+
+    // Small tan eyebrow dot above the eye — classic black-and-tan dachshund marking
+    ctx.fillStyle = 'rgba(200,140,80,0.9)';
+    ctx.beginPath();
+    ctx.ellipse(skullW * 0.02, -skullH * 0.38, CELL * 0.07, CELL * 0.035, -0.1, 0, Math.PI * 2);
     ctx.fill();
 
     ctx.restore();
   }
 
-  function drawPuppyEye(x, y, r, ts) {
+  function drawRealisticEye(x, y, r, ts) {
     ctx.save();
     ctx.translate(x, y);
 
     const blinking = isBlinking(ts);
 
     if (blinking) {
-      // Closed eye: curved line with lashes
+      // Closed eye: a short curved line
       ctx.strokeStyle = '#1a0f06';
-      ctx.lineWidth = 2.4;
+      ctx.lineWidth = 1.8;
       ctx.lineCap = 'round';
       ctx.beginPath();
-      ctx.moveTo(-r * 1.05, 0);
-      ctx.quadraticCurveTo(0, r * 0.55, r * 1.05, 0);
-      ctx.stroke();
-      // Closed lashes (sweeping down)
-      ctx.lineWidth = 1.6;
-      ctx.beginPath();
-      ctx.moveTo(-r * 0.5, r * 0.08);
-      ctx.lineTo(-r * 0.75, r * 0.4);
-      ctx.moveTo(-r * 0.1, r * 0.32);
-      ctx.lineTo(-r * 0.15, r * 0.7);
-      ctx.moveTo(r * 0.3, r * 0.28);
-      ctx.lineTo(r * 0.45, r * 0.6);
+      ctx.moveTo(-r * 0.95, r * 0.05);
+      ctx.quadraticCurveTo(0, r * 0.45, r * 0.95, r * 0.05);
       ctx.stroke();
       ctx.restore();
       return;
     }
 
-    // Outer eye (bigger for puppy look)
-    ctx.fillStyle = '#fff';
-    ctx.strokeStyle = '#2a1608';
-    ctx.lineWidth = 2;
+    // Outer eye — almond-shaped, more anatomical
+    ctx.save();
     ctx.beginPath();
-    ctx.ellipse(0, 0, r * 1.15, r * 1.3, 0, 0, Math.PI * 2);
-    ctx.fill(); ctx.stroke();
+    // almond outline: two curved arcs
+    ctx.moveTo(-r * 1.0, 0);
+    ctx.quadraticCurveTo(-r * 0.3, -r * 0.85, r * 0.95, -r * 0.15);
+    ctx.quadraticCurveTo(-r * 0.2, r * 0.75, -r * 1.0, 0);
+    ctx.closePath();
+    ctx.fillStyle = '#fff';
+    ctx.fill();
+    ctx.strokeStyle = '#1a0f06';
+    ctx.lineWidth = 1.4;
+    ctx.stroke();
+    ctx.clip(); // clip inner details to the eye shape
 
-    // Iris (warm brown with gradient for depth)
-    const irisGrad = ctx.createRadialGradient(-r * 0.15, -r * 0.2, r * 0.1, r * 0.1, 0, r * 0.9);
-    irisGrad.addColorStop(0, '#8b5a2b');
-    irisGrad.addColorStop(0.6, '#5a3412');
+    // Iris — warm amber-brown
+    const irisGrad = ctx.createRadialGradient(-r * 0.1, -r * 0.2, r * 0.08, 0, 0, r * 0.85);
+    irisGrad.addColorStop(0, '#a06a2a');
+    irisGrad.addColorStop(0.65, '#5a3412');
     irisGrad.addColorStop(1, '#2a1608');
     ctx.fillStyle = irisGrad;
     ctx.beginPath();
-    ctx.ellipse(r * 0.1, r * 0.08, r * 0.82, r * 0.95, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, -r * 0.05, r * 0.8, r * 0.8, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // Pupil (large for cute proportions)
+    // Pupil — vertical oval, moderate size
     ctx.fillStyle = '#0a0604';
     ctx.beginPath();
-    ctx.ellipse(r * 0.2, r * 0.12, r * 0.44, r * 0.6, 0, 0, Math.PI * 2);
+    ctx.ellipse(r * 0.05, -r * 0.02, r * 0.32, r * 0.42, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // Big starry highlight (the iconic puppy-eye gleam)
-    ctx.fillStyle = '#fff';
+    // One clean highlight (realistic)
+    ctx.fillStyle = 'rgba(255,255,255,0.95)';
     ctx.beginPath();
-    ctx.ellipse(-r * 0.15, -r * 0.38, r * 0.38, r * 0.3, 0, 0, Math.PI * 2);
-    ctx.fill();
-    // Medium highlight
-    ctx.beginPath();
-    ctx.ellipse(r * 0.35, -r * 0.08, r * 0.16, r * 0.13, 0, 0, Math.PI * 2);
-    ctx.fill();
-    // Tiny sparkle
-    ctx.fillStyle = 'rgba(255,255,255,0.8)';
-    ctx.beginPath();
-    ctx.ellipse(-r * 0.4, r * 0.3, r * 0.08, r * 0.06, 0, 0, Math.PI * 2);
+    ctx.ellipse(-r * 0.2, -r * 0.32, r * 0.2, r * 0.15, -0.3, 0, Math.PI * 2);
     ctx.fill();
 
-    // Upper eyelid shadow (gives the "looking up" puppy-dog look)
-    ctx.save();
+    // Upper lash shadow
+    ctx.fillStyle = 'rgba(26,15,6,0.35)';
     ctx.beginPath();
-    ctx.ellipse(0, 0, r * 1.15, r * 1.3, 0, 0, Math.PI * 2);
-    ctx.clip();
-    ctx.fillStyle = 'rgba(42,22,8,0.35)';
-    ctx.beginPath();
-    ctx.ellipse(0, -r * 1.0, r * 1.6, r * 0.9, 0, 0, Math.PI * 2);
+    ctx.ellipse(-r * 0.1, -r * 0.75, r * 1.2, r * 0.35, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.restore();
 
-    // Long curled eyelashes on top (4-5 lashes)
-    ctx.strokeStyle = '#1a0f06';
-    ctx.lineWidth = 2;
-    ctx.lineCap = 'round';
-    const lashes = [
-      { x: -r * 0.55, angle: -0.5, len: r * 0.55 },
-      { x: -r * 0.25, angle: -0.2, len: r * 0.6 },
-      { x:  r * 0.05, angle:  0.0, len: r * 0.65 },
-      { x:  r * 0.4,  angle:  0.25, len: r * 0.55 },
-      { x:  r * 0.7,  angle:  0.5, len: r * 0.45 },
-    ];
-    const lashY = -r * 1.25;
-    for (const L of lashes) {
-      ctx.beginPath();
-      ctx.moveTo(L.x, lashY);
-      ctx.quadraticCurveTo(
-        L.x + Math.sin(L.angle) * L.len * 0.5,
-        lashY - L.len * 0.35,
-        L.x + Math.sin(L.angle) * L.len,
-        lashY - L.len * 0.75
-      );
-      ctx.stroke();
-    }
-
-    ctx.restore();
+    ctx.restore(); // matches the inner save() before the almond clip
+    ctx.restore(); // matches the outer save() at function start
   }
 
   function roundRect(x, y, w, h, r) {
