@@ -1329,21 +1329,22 @@ const Sprites = (() => {
     ctx.strokeStyle = item.dark;
     ctx.lineWidth = Math.max(1, s * 0.022);
 
-    // Лиф — облегает спину/грудь
+    // Лиф — облегает спину/грудь, заканчивается до головы
     ctx.beginPath();
-    ctx.moveTo(s * 0.32, s * 0.42);
-    ctx.quadraticCurveTo(s * 0.5, s * 0.36, s * 0.7, s * 0.42);
-    ctx.lineTo(s * 0.74, s * 0.6);
-    ctx.lineTo(s * 0.3, s * 0.6);
+    ctx.moveTo(s * 0.3, s * 0.44);
+    ctx.quadraticCurveTo(s * 0.46, s * 0.38, s * 0.6, s * 0.46);
+    ctx.lineTo(s * 0.62, s * 0.6);
+    ctx.lineTo(s * 0.28, s * 0.6);
     ctx.closePath();
     ctx.fill();
     ctx.stroke();
 
-    // Воротник / V-вырез у основания шеи
+    // Лямка/петелька у плеча, чтобы платье «держалось»
     ctx.beginPath();
-    ctx.moveTo(s * 0.66, s * 0.42);
-    ctx.lineTo(s * 0.72, s * 0.5);
-    ctx.lineTo(s * 0.74, s * 0.43);
+    ctx.moveTo(s * 0.58, s * 0.46);
+    ctx.lineTo(s * 0.62, s * 0.5);
+    ctx.lineTo(s * 0.6, s * 0.52);
+    ctx.lineTo(s * 0.55, s * 0.48);
     ctx.closePath();
     ctx.fillStyle = item.dark;
     ctx.fill();
@@ -1351,13 +1352,13 @@ const Sprites = (() => {
     // Длинный шлейф — тянется от низа лифа к хвостовой части и под живот
     ctx.fillStyle = item.main;
     ctx.beginPath();
-    ctx.moveTo(s * 0.3, s * 0.6);
-    ctx.lineTo(s * 0.74, s * 0.6);
-    ctx.lineTo(s * 0.78, s * 0.86);
-    ctx.lineTo(s * 0.66, s * 0.94);
-    ctx.lineTo(s * 0.5, s * 0.92);
-    ctx.lineTo(s * 0.3, s * 0.95);
-    ctx.lineTo(s * 0.16, s * 0.86);
+    ctx.moveTo(s * 0.28, s * 0.6);
+    ctx.lineTo(s * 0.62, s * 0.6);
+    ctx.lineTo(s * 0.7, s * 0.86);
+    ctx.lineTo(s * 0.6, s * 0.94);
+    ctx.lineTo(s * 0.46, s * 0.92);
+    ctx.lineTo(s * 0.28, s * 0.95);
+    ctx.lineTo(s * 0.14, s * 0.86);
     ctx.closePath();
     ctx.fill();
     ctx.stroke();
@@ -1366,29 +1367,29 @@ const Sprites = (() => {
       // Золотой поясок по низу лифа
       ctx.fillStyle = item.accent;
       ctx.beginPath();
-      ctx.moveTo(s * 0.3, s * 0.59);
-      ctx.lineTo(s * 0.74, s * 0.59);
-      ctx.lineTo(s * 0.74, s * 0.61);
-      ctx.lineTo(s * 0.3, s * 0.61);
+      ctx.moveTo(s * 0.28, s * 0.59);
+      ctx.lineTo(s * 0.62, s * 0.59);
+      ctx.lineTo(s * 0.62, s * 0.61);
+      ctx.lineTo(s * 0.28, s * 0.61);
       ctx.closePath();
       ctx.fill();
     } else if (item.id === 'dress-black') {
       ctx.fillStyle = item.accent;
-      for (const [px, py] of [[0.4, 0.5], [0.55, 0.46], [0.66, 0.52], [0.34, 0.78], [0.5, 0.82], [0.66, 0.78], [0.45, 0.68]]) {
+      for (const [px, py] of [[0.36, 0.5], [0.5, 0.45], [0.58, 0.55], [0.3, 0.78], [0.46, 0.82], [0.6, 0.78], [0.4, 0.68]]) {
         drawStar(ctx, s * px, s * py, s * 0.018, 5);
       }
     } else if (item.id === 'dress-gold') {
       ctx.fillStyle = item.accent;
       for (let i = 0; i < 28; i++) {
-        const px = 0.22 + Math.random() * 0.55;
-        const py = 0.45 + Math.random() * 0.45;
+        const px = 0.18 + Math.random() * 0.45;
+        const py = 0.48 + Math.random() * 0.42;
         ctx.beginPath();
         ctx.arc(s * px, s * py, s * 0.012, 0, Math.PI * 2);
         ctx.fill();
       }
     } else if (item.id === 'dress-lavender') {
       ctx.fillStyle = item.accent;
-      for (const [cx, cy] of [[0.32, 0.78], [0.46, 0.86], [0.6, 0.82], [0.7, 0.7], [0.42, 0.55]]) {
+      for (const [cx, cy] of [[0.3, 0.78], [0.42, 0.86], [0.55, 0.82], [0.6, 0.7], [0.4, 0.55]]) {
         for (let p = 0; p < 5; p++) {
           const a = (p / 5) * Math.PI * 2;
           ctx.beginPath();
