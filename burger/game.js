@@ -84,7 +84,7 @@ const PERFECT_TH = 10;
 const OK_TH = 35;
 const MISS_TH = 70;
 const GRAVITY = 0.6;
-const MAX_LEAN = 150;
+const MAX_LEAN = 100;
 const DOG_INTERVAL = 8;
 const DOG_EAT_LAYERS = 3;
 const SWAY_FRICTION = 0.96;
@@ -579,7 +579,7 @@ function landIng() {
         spawnP(px, py - cameraY, '#FF5252', 12);
     }
 
-    targetCamY = Math.min(0, lp.y - H * 0.6);
+    targetCamY = Math.min(0, lp.y - H * 0.75);
     moveSpd = Math.min(SPD_MAX, SPD_BASE + level * SPD_INC);
     fallIng = null; updateHUD();
 
@@ -757,7 +757,7 @@ function updateDog() {
             const ps = stackPos();
             if (ps.length > 0) {
                 const lp = ps[ps.length - 1];
-                targetCamY = Math.min(0, lp.y - H * 0.6);
+                targetCamY = Math.min(0, lp.y - H * 0.75);
             }
             gameState = 'playing';
             spawnIng();
