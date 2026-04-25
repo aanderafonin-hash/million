@@ -46,14 +46,14 @@
   // ---------- Хранилище ----------
   const Storage = (() => {
     const KEY = 'pekinese_flight_save_v1';
-    const DEFAULT = { best: 0, unlocked: 1, completed: [], soundOn: true, outfit: { hat: null, body: null } };
+    const DEFAULT = { best: 0, unlocked: 1, completed: [], soundOn: true, outfit: { hat: null, body: null, boots: null } };
     const load = () => {
       let data = { ...DEFAULT };
       try {
         const raw = localStorage.getItem(KEY);
         if (raw) data = { ...DEFAULT, ...JSON.parse(raw) };
       } catch (_) {}
-      data.outfit = { hat: null, body: null, ...(data.outfit || {}) };
+      data.outfit = { hat: null, body: null, boots: null, ...(data.outfit || {}) };
       return data;
     };
     const save = (data) => {
@@ -178,9 +178,17 @@
     return {
       hat: findOutfitItem('hat', Game.save.outfit.hat),
       body: findOutfitItem('body', Game.save.outfit.body),
+      boots: findOutfitItem('boots', Game.save.outfit.boots),
     };
   }
+  function isUnlocked(item) {
+    return (Game.save.completed?.length || 0) >= (item.unlock || 1);
+  }
   function setOutfit(category, id) {
+    if (id) {
+      const item = findOutfitItem(category, id);
+      if (!item || !isUnlocked(item)) return;
+    }
     Game.save.outfit = { ...Game.save.outfit, [category]: id };
     Storage.save(Game.save);
     renderWardrobeGrid();
@@ -606,11 +614,23 @@
 
   function finishLevel() {
     const idx = Game.currentLevel;
+    const wasCompletedCount = Game.save.completed.length;
     // Сохраняем прогресс
     if (!Game.save.completed.includes(idx)) Game.save.completed.push(idx);
     Game.save.unlocked = Math.max(Game.save.unlocked, Math.min(LEVELS.length, idx + 2));
+    const newCompletedCount = Game.save.completed.length;
     if (Game.score > Game.save.best) Game.save.best = Game.score;
     Storage.save(Game.save);
+
+    // Какие наряды только что открылись?
+    const newlyUnlocked = [];
+    if (newCompletedCount > wasCompletedCount) {
+      for (const cat of ['hat', 'body', 'boots']) {
+        for (const item of (OUTFITS[cat] || [])) {
+          if (item.unlock === newCompletedCount) newlyUnlocked.push(item);
+        }
+      }
+    }
 
     // Попытаемся показать fullscreen-рекламу между уровнями (не блокирует UI)
     Yandex.showFullscreenAd();
@@ -618,8 +638,11 @@
     if (idx + 1 >= LEVELS.length) {
       setState(STATE.FINAL);
     } else {
-      document.getElementById('win-stats').textContent =
-        `Ты пролетел ${Game.score} препятствий и съел ${Game.bonesCollected} косточек. Пекинес получил главную косточку!`;
+      let msg = `Ты пролетел ${Game.score} препятствий и съел ${Game.bonesCollected} косточек.`;
+      if (newlyUnlocked.length) {
+        msg += ' Открыты новые наряды: ' + newlyUnlocked.map(i => i.name).join(', ') + '.';
+      }
+      document.getElementById('win-stats').textContent = msg;
       setState(STATE.WIN);
     }
   }
@@ -833,10 +856,12 @@
     const selectedId = Game.save.outfit[tab];
     grid.innerHTML = '';
     for (const item of items) {
+      const unlocked = isUnlocked(item);
       const cell = document.createElement('button');
       cell.type = 'button';
       cell.className = 'wardrobe__cell';
       if (item.id === selectedId) cell.classList.add('is-selected');
+      if (!unlocked) cell.classList.add('is-locked');
       const cv = document.createElement('canvas');
       cv.width = 120; cv.height = 120;
       const c = cv.getContext('2d');
@@ -845,14 +870,24 @@
       c.save();
       c.translate(cv.width / 2, cv.height / 2 + 6);
       Sprites.drawPekinese(c, 100, 0);
-      Sprites.drawOutfit(c, 100, tab === 'hat' ? { hat: item } : { body: item });
+      const previewOutfit = {};
+      previewOutfit[tab] = item;
+      Sprites.drawOutfit(c, 100, previewOutfit);
       c.restore();
       cell.appendChild(cv);
       const label = document.createElement('span');
       label.className = 'wardrobe__label';
       label.textContent = item.name;
       cell.appendChild(label);
-      cell.addEventListener('click', () => setOutfit(tab, item.id));
+      if (!unlocked) {
+        const lock = document.createElement('span');
+        lock.className = 'wardrobe__lock';
+        lock.textContent = `\u{1F512} Уровень ${item.unlock}`;
+        cell.appendChild(lock);
+      }
+      cell.addEventListener('click', () => {
+        if (unlocked) setOutfit(tab, item.id);
+      });
       grid.appendChild(cell);
     }
   }
@@ -911,6 +946,7 @@
     document.getElementById('btn-wardrobe-back').addEventListener('click', () => setState(STATE.MENU));
     document.getElementById('btn-wardrobe-clear-hat').addEventListener('click', () => { setOutfit('hat', null); });
     document.getElementById('btn-wardrobe-clear-body').addEventListener('click', () => { setOutfit('body', null); });
+    document.getElementById('btn-wardrobe-clear-boots').addEventListener('click', () => { setOutfit('boots', null); });
     document.querySelectorAll('.ui-btn--tab').forEach(btn => {
       btn.addEventListener('click', () => {
         document.querySelectorAll('.ui-btn--tab').forEach(b => b.classList.toggle('is-active', b === btn));

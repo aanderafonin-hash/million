@@ -256,7 +256,10 @@ html, body {
 }
 .wardrobe__cell:hover { transform: translateY(-2px); }
 .wardrobe__cell.is-selected { border-color: var(--accent); background: #fff5e8; }
+.wardrobe__cell.is-locked { cursor: not-allowed; opacity: 0.55; filter: grayscale(0.8); position: relative; }
+.wardrobe__cell.is-locked:hover { transform: none; }
 .wardrobe__label { font-size: 11px; margin-top: 4px; text-align: center; line-height: 1.2; color: #444; }
+.wardrobe__lock { font-size: 10px; color: #b0331c; margin-top: 2px; text-align: center; font-weight: 600; }
 .wardrobe__actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .wardrobe__footer { margin-top: 8px; }
 

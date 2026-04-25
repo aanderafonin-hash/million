@@ -1133,6 +1133,7 @@ const Sprites = (() => {
     ctx.save();
     ctx.translate(-s / 2, -s / 2);
     if (outfit.body) drawBodyOutfit(ctx, s, outfit.body);
+    if (outfit.boots) drawBootsOutfit(ctx, s, outfit.boots);
     if (outfit.hat) drawHatOutfit(ctx, s, outfit.hat);
     ctx.restore();
   }
@@ -1140,7 +1141,6 @@ const Sprites = (() => {
   function drawBodyOutfit(ctx, s, item) {
     if (item.sub === 'skirt') drawSkirt(ctx, s, item);
     else if (item.sub === 'shorts') drawShorts(ctx, s, item);
-    else if (item.sub === 'dress') drawDress(ctx, s, item);
   }
 
   function drawSkirt(ctx, s, item) {
@@ -1321,87 +1321,110 @@ const Sprites = (() => {
     ctx.restore();
   }
 
-  function drawDress(ctx, s, item) {
-    // Вечернее платье: облегает корпус, шлейф длинной юбки тянется вниз
-    // и слегка назад от хвоста.
+  function drawBootsOutfit(ctx, s, item) {
+    // Лапки пекинеса (передние) — центры (s*0.5, s*0.82) и (s*0.66, s*0.82),
+    // эллипс rx=0.05, ry=0.07. Рисуем по ботиночку на каждую видимую лапку.
+    const paws = [
+      { cx: 0.5, cy: 0.82 },
+      { cx: 0.66, cy: 0.82 },
+    ];
     ctx.save();
-    ctx.fillStyle = item.main;
-    ctx.strokeStyle = item.dark;
-    ctx.lineWidth = Math.max(1, s * 0.022);
-
-    // Лиф — облегает спину/грудь, заканчивается до головы
-    ctx.beginPath();
-    ctx.moveTo(s * 0.3, s * 0.44);
-    ctx.quadraticCurveTo(s * 0.46, s * 0.38, s * 0.6, s * 0.46);
-    ctx.lineTo(s * 0.62, s * 0.6);
-    ctx.lineTo(s * 0.28, s * 0.6);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
-
-    // Лямка/петелька у плеча, чтобы платье «держалось»
-    ctx.beginPath();
-    ctx.moveTo(s * 0.58, s * 0.46);
-    ctx.lineTo(s * 0.62, s * 0.5);
-    ctx.lineTo(s * 0.6, s * 0.52);
-    ctx.lineTo(s * 0.55, s * 0.48);
-    ctx.closePath();
-    ctx.fillStyle = item.dark;
-    ctx.fill();
-
-    // Длинный шлейф — тянется от низа лифа к хвостовой части и под живот
-    ctx.fillStyle = item.main;
-    ctx.beginPath();
-    ctx.moveTo(s * 0.28, s * 0.6);
-    ctx.lineTo(s * 0.62, s * 0.6);
-    ctx.lineTo(s * 0.7, s * 0.86);
-    ctx.lineTo(s * 0.6, s * 0.94);
-    ctx.lineTo(s * 0.46, s * 0.92);
-    ctx.lineTo(s * 0.28, s * 0.95);
-    ctx.lineTo(s * 0.14, s * 0.86);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
-
-    if (item.id === 'dress-red') {
-      // Золотой поясок по низу лифа
-      ctx.fillStyle = item.accent;
-      ctx.beginPath();
-      ctx.moveTo(s * 0.28, s * 0.59);
-      ctx.lineTo(s * 0.62, s * 0.59);
-      ctx.lineTo(s * 0.62, s * 0.61);
-      ctx.lineTo(s * 0.28, s * 0.61);
-      ctx.closePath();
-      ctx.fill();
-    } else if (item.id === 'dress-black') {
-      ctx.fillStyle = item.accent;
-      for (const [px, py] of [[0.36, 0.5], [0.5, 0.45], [0.58, 0.55], [0.3, 0.78], [0.46, 0.82], [0.6, 0.78], [0.4, 0.68]]) {
-        drawStar(ctx, s * px, s * py, s * 0.018, 5);
-      }
-    } else if (item.id === 'dress-gold') {
-      ctx.fillStyle = item.accent;
-      for (let i = 0; i < 28; i++) {
-        const px = 0.18 + Math.random() * 0.45;
-        const py = 0.48 + Math.random() * 0.42;
-        ctx.beginPath();
-        ctx.arc(s * px, s * py, s * 0.012, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    } else if (item.id === 'dress-lavender') {
-      ctx.fillStyle = item.accent;
-      for (const [cx, cy] of [[0.3, 0.78], [0.42, 0.86], [0.55, 0.82], [0.6, 0.7], [0.4, 0.55]]) {
-        for (let p = 0; p < 5; p++) {
-          const a = (p / 5) * Math.PI * 2;
-          ctx.beginPath();
-          ctx.arc(s * cx + Math.cos(a) * s * 0.012, s * cy + Math.sin(a) * s * 0.012, s * 0.008, 0, Math.PI * 2);
-          ctx.fill();
-        }
-        ctx.fillStyle = '#f3c940';
-        ctx.beginPath(); ctx.arc(s * cx, s * cy, s * 0.008, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = item.accent;
-      }
+    ctx.lineWidth = Math.max(1, s * 0.018);
+    for (const p of paws) {
+      drawSingleBoot(ctx, s, p.cx, p.cy, item);
     }
     ctx.restore();
+  }
+
+  function drawSingleBoot(ctx, s, cx, cy, item) {
+    const x = cx * s, y = cy * s;
+    const w = s * 0.11, h = s * 0.09;
+    ctx.strokeStyle = item.dark;
+    ctx.fillStyle = item.main;
+
+    if (item.id === 'boots-sneaker') {
+      // Низкие кроссовки: округлая верхняя часть + белая подошва
+      roundRect(ctx, x - w * 0.55, y - h * 0.1, w, h, s * 0.018);
+      ctx.fill(); ctx.stroke();
+      ctx.fillStyle = item.dark;
+      ctx.fillRect(x - w * 0.55, y + h * 0.55, w, h * 0.25);
+      // Цветная полоса
+      ctx.fillStyle = item.accent;
+      ctx.fillRect(x - w * 0.5, y + h * 0.3, w * 0.9, h * 0.12);
+      // Шнурки — две точки
+      ctx.fillStyle = '#ffffff';
+      for (const dx of [-w * 0.2, 0, w * 0.2]) {
+        ctx.beginPath();
+        ctx.arc(x + dx, y + h * 0.05, s * 0.007, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    } else if (item.id === 'boots-rubber') {
+      // Резиновые сапожки: высокое голенище
+      roundRect(ctx, x - w * 0.5, y - h * 0.5, w, h * 1.4, s * 0.022);
+      ctx.fill(); ctx.stroke();
+      // Полоска по верху
+      ctx.fillStyle = item.accent;
+      ctx.fillRect(x - w * 0.5, y - h * 0.45, w, h * 0.12);
+      // Подошва
+      ctx.fillStyle = item.dark;
+      ctx.fillRect(x - w * 0.55, y + h * 0.8, w * 1.1, h * 0.18);
+    } else if (item.id === 'boots-leather') {
+      // Классические кожаные ботиночки со шнуровкой
+      roundRect(ctx, x - w * 0.55, y - h * 0.2, w, h * 1.05, s * 0.02);
+      ctx.fill(); ctx.stroke();
+      // Носок (более светлый)
+      ctx.fillStyle = '#a05a28';
+      ctx.beginPath();
+      ctx.ellipse(x + w * 0.15, y + h * 0.4, w * 0.35, h * 0.3, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // Шнурки крест-накрест
+      ctx.strokeStyle = item.accent;
+      ctx.lineWidth = Math.max(1, s * 0.008);
+      for (let i = 0; i < 3; i++) {
+        const yy = y + (i - 0.5) * h * 0.15;
+        ctx.beginPath();
+        ctx.moveTo(x - w * 0.2, yy);
+        ctx.lineTo(x + w * 0.2, yy + h * 0.05);
+        ctx.stroke();
+      }
+      // Подошва
+      ctx.fillStyle = item.dark;
+      ctx.fillRect(x - w * 0.6, y + h * 0.78, w * 1.15, h * 0.18);
+    } else if (item.id === 'boots-winter') {
+      // Валеночки: округлая мягкая форма с цветным помпоном
+      ctx.beginPath();
+      ctx.ellipse(x, y + h * 0.3, w * 0.55, h * 0.7, 0, 0, Math.PI * 2);
+      ctx.fill(); ctx.stroke();
+      // Голенище
+      roundRect(ctx, x - w * 0.4, y - h * 0.35, w * 0.8, h * 0.6, s * 0.025);
+      ctx.fill(); ctx.stroke();
+      // Помпон сбоку
+      ctx.fillStyle = item.accent;
+      ctx.beginPath();
+      ctx.arc(x + w * 0.35, y - h * 0.15, s * 0.018, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (item.id === 'boots-ballet') {
+      // Балетки: низкие, с лентой через подъём
+      roundRect(ctx, x - w * 0.55, y + h * 0.1, w, h * 0.65, s * 0.025);
+      ctx.fill(); ctx.stroke();
+      // Лента крест-накрест
+      ctx.strokeStyle = item.accent;
+      ctx.lineWidth = Math.max(1, s * 0.012);
+      ctx.beginPath();
+      ctx.moveTo(x - w * 0.5, y - h * 0.2);
+      ctx.lineTo(x + w * 0.5, y + h * 0.2);
+      ctx.moveTo(x + w * 0.5, y - h * 0.2);
+      ctx.lineTo(x - w * 0.5, y + h * 0.2);
+      ctx.stroke();
+      // Бантик сверху
+      ctx.fillStyle = item.accent;
+      ctx.beginPath();
+      ctx.ellipse(x - s * 0.018, y - h * 0.15, s * 0.015, s * 0.01, -0.4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse(x + s * 0.018, y - h * 0.15, s * 0.015, s * 0.01, 0.4, 0, Math.PI * 2);
+      ctx.fill();
+    }
   }
 
   function drawStar(ctx, cx, cy, r, points) {
@@ -1517,6 +1540,31 @@ const Sprites = (() => {
         ctx.arc(x, s * 0.018, s * 0.012, 0, Math.PI * 2);
         ctx.fill();
       }
+      ctx.restore();
+    } else if (item.id === 'tophat') {
+      // Чёрный цилиндр с красной лентой
+      ctx.save();
+      ctx.translate(s * 0.72, s * 0.22);
+      ctx.rotate(-0.08);
+      ctx.fillStyle = item.main;
+      ctx.strokeStyle = item.dark;
+      ctx.lineWidth = Math.max(1, s * 0.022);
+      // Поля цилиндра (овал на голове)
+      ctx.beginPath();
+      ctx.ellipse(0, 0, s * 0.16, s * 0.035, 0, 0, Math.PI * 2);
+      ctx.fill(); ctx.stroke();
+      // Тулья — высокий цилиндр
+      const topW = s * 0.2, topH = s * 0.16;
+      ctx.beginPath();
+      ctx.rect(-topW / 2, -topH, topW, topH);
+      ctx.fill(); ctx.stroke();
+      // Верхняя крышка
+      ctx.beginPath();
+      ctx.ellipse(0, -topH, topW / 2, s * 0.025, 0, 0, Math.PI * 2);
+      ctx.fill(); ctx.stroke();
+      // Лента
+      ctx.fillStyle = item.accent;
+      ctx.fillRect(-topW / 2, -s * 0.04, topW, s * 0.025);
       ctx.restore();
     }
   }
