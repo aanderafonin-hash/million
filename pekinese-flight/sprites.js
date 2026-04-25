@@ -412,74 +412,200 @@ const Sprites = (() => {
 
   function drawBoot(ctx, x, y, w, h, flipped = false) {
     withFlip(ctx, x, y, w, h, flipped, () => {
-      ctx.fillStyle = '#3a2414';
-      // Голенище
-      roundRect(ctx, x + w * 0.15, y, w * 0.55, h * 0.7, 10);
-      ctx.fill();
-      // Носок
+      // Палитра ботинка: насыщенная кожа + чёрный контур
+      const leather = '#5a2a14';
+      const leatherDk = '#3a1808';
+      const outline = '#140804';
+      const sole = '#0e0604';
+      const lace = '#f3e6c2';
+      const eyelet = '#0e0604';
+      const stroke = Math.max(2.5, Math.min(w, h) * 0.04);
+
+      // === Силуэт ботинка одной фигурой ===
       ctx.beginPath();
-      ctx.moveTo(x + w * 0.15, y + h * 0.6);
-      ctx.lineTo(x + w * 0.95, y + h * 0.6);
-      ctx.quadraticCurveTo(x + w, y + h * 0.8, x + w * 0.9, y + h * 0.88);
-      ctx.lineTo(x + w * 0.12, y + h * 0.88);
+      // Верх голенища
+      ctx.moveTo(x + w * 0.22, y + h * 0.04);
+      ctx.lineTo(x + w * 0.62, y + h * 0.04);
+      // Правый бок голенища
+      ctx.lineTo(x + w * 0.66, y + h * 0.55);
+      // Подъём (выпирает вперёд)
+      ctx.quadraticCurveTo(x + w * 0.78, y + h * 0.6, x + w * 0.94, y + h * 0.66);
+      // Носок (закруглён)
+      ctx.quadraticCurveTo(x + w * 0.99, y + h * 0.72, x + w * 0.96, y + h * 0.82);
+      // Низ носка
+      ctx.lineTo(x + w * 0.18, y + h * 0.82);
+      // Каблук
+      ctx.lineTo(x + w * 0.16, y + h * 0.62);
+      // Левый бок голенища
+      ctx.lineTo(x + w * 0.18, y + h * 0.04);
       ctx.closePath();
+      ctx.fillStyle = leather;
       ctx.fill();
-      // Подошва
-      ctx.fillStyle = '#1a0d05';
-      roundRect(ctx, x + w * 0.1, y + h * 0.85, w * 0.85, h * 0.12, 4);
+      ctx.strokeStyle = outline;
+      ctx.lineWidth = stroke;
+      ctx.lineJoin = 'round';
+      ctx.stroke();
+
+      // === Тёмная переходная складка (между голенищем и носком) ===
+      ctx.beginPath();
+      ctx.moveTo(x + w * 0.16, y + h * 0.6);
+      ctx.lineTo(x + w * 0.66, y + h * 0.6);
+      ctx.strokeStyle = leatherDk;
+      ctx.lineWidth = stroke * 0.8;
+      ctx.stroke();
+
+      // === Язычок (выглядывает из-под шнуровки) ===
+      ctx.beginPath();
+      ctx.moveTo(x + w * 0.32, y + h * 0.1);
+      ctx.lineTo(x + w * 0.52, y + h * 0.1);
+      ctx.lineTo(x + w * 0.5, y + h * 0.6);
+      ctx.lineTo(x + w * 0.34, y + h * 0.6);
+      ctx.closePath();
+      ctx.fillStyle = leatherDk;
       ctx.fill();
-      // Шнурки
-      ctx.strokeStyle = '#d8c190';
-      ctx.lineWidth = 2;
-      for (let i = 0; i < 4; i++) {
-        const yy = y + h * 0.12 + i * h * 0.12;
+      ctx.strokeStyle = outline;
+      ctx.lineWidth = stroke * 0.7;
+      ctx.stroke();
+
+      // === Шнуровка крест-накрест по язычку ===
+      const eyelets = [
+        [0.32, 0.18], [0.52, 0.18],
+        [0.32, 0.30], [0.52, 0.30],
+        [0.33, 0.42], [0.51, 0.42],
+        [0.34, 0.54], [0.50, 0.54],
+      ];
+      ctx.strokeStyle = lace;
+      ctx.lineWidth = stroke * 0.7;
+      ctx.lineCap = 'round';
+      // X-крест шнурки между парами люверсов
+      for (let i = 0; i < eyelets.length - 2; i += 2) {
+        const a = eyelets[i], b = eyelets[i + 1];
+        const c = eyelets[i + 2], d = eyelets[i + 3];
         ctx.beginPath();
-        ctx.moveTo(x + w * 0.22, yy);
-        ctx.lineTo(x + w * 0.62, yy);
+        ctx.moveTo(x + w * a[0], y + h * a[1]);
+        ctx.lineTo(x + w * d[0], y + h * d[1]);
+        ctx.moveTo(x + w * b[0], y + h * b[1]);
+        ctx.lineTo(x + w * c[0], y + h * c[1]);
         ctx.stroke();
       }
-      // Блик
-      ctx.fillStyle = 'rgba(255,255,255,0.12)';
-      roundRect(ctx, x + w * 0.2, y + h * 0.05, w * 0.08, h * 0.6, 4);
+      ctx.lineCap = 'butt';
+      // Люверсы (металлические дырочки)
+      ctx.fillStyle = eyelet;
+      for (const [ex, ey] of eyelets) {
+        ctx.beginPath();
+        ctx.arc(x + w * ex, y + h * ey, Math.max(2, h * 0.018), 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // === Подошва (чёрная толстая полоса с каблуком) ===
+      ctx.beginPath();
+      ctx.moveTo(x + w * 0.16, y + h * 0.82);
+      ctx.lineTo(x + w * 0.96, y + h * 0.82);
+      ctx.lineTo(x + w * 0.96, y + h * 0.92);
+      ctx.lineTo(x + w * 0.18, y + h * 0.92);
+      ctx.lineTo(x + w * 0.16, y + h * 0.82);
+      ctx.closePath();
+      ctx.fillStyle = sole;
+      ctx.fill();
+      ctx.strokeStyle = outline;
+      ctx.lineWidth = stroke * 0.7;
+      ctx.stroke();
+      // Каблук (выступ снизу слева)
+      ctx.fillStyle = sole;
+      ctx.fillRect(x + w * 0.18, y + h * 0.92, w * 0.18, h * 0.06);
+      ctx.strokeRect(x + w * 0.18, y + h * 0.92, w * 0.18, h * 0.06);
+
+      // === Блик на голенище (для объёма) ===
+      ctx.fillStyle = 'rgba(255,255,255,0.10)';
+      roundRect(ctx, x + w * 0.21, y + h * 0.08, w * 0.06, h * 0.45, 4);
       ctx.fill();
     });
   }
 
   function drawSlipper(ctx, x, y, w, h, flipped = false) {
     withFlip(ctx, x, y, w, h, flipped, () => {
-      // "Тапок" занимает нижнюю часть прямоугольника, верх — помпон
-      // Основная часть — плюшевый розовый тапок
-      ctx.fillStyle = '#ffb3c6';
+      // Палитра тапка: насыщенный розовый + тёмно-малиновый контур
+      const pink = '#f06d96';
+      const pinkDk = '#a83560';
+      const outline = '#5a1c34';
+      const fur = '#fff5f8';
+      const furShadow = '#e0b8c8';
+      const sole = '#3a1422';
+      const stroke = Math.max(2.5, Math.min(w, h) * 0.04);
+
+      // === Корпус тапка — низкий «башмачок» с открытой пяткой ===
       ctx.beginPath();
-      ctx.moveTo(x + w * 0.08, y + h * 0.55);
-      ctx.quadraticCurveTo(x + w * 0.5, y + h * 0.4, x + w * 0.95, y + h * 0.55);
-      ctx.quadraticCurveTo(x + w * 0.95, y + h * 0.85, x + w * 0.75, y + h * 0.9);
-      ctx.lineTo(x + w * 0.2, y + h * 0.9);
-      ctx.quadraticCurveTo(x + w * 0.05, y + h * 0.85, x + w * 0.08, y + h * 0.55);
+      // Носок (округлый, выступающий вправо)
+      ctx.moveTo(x + w * 0.08, y + h * 0.62);
+      ctx.quadraticCurveTo(x + w * 0.1, y + h * 0.5, x + w * 0.25, y + h * 0.5);
+      ctx.lineTo(x + w * 0.78, y + h * 0.5);
+      ctx.quadraticCurveTo(x + w * 0.96, y + h * 0.55, x + w * 0.96, y + h * 0.7);
+      ctx.quadraticCurveTo(x + w * 0.95, y + h * 0.86, x + w * 0.78, y + h * 0.88);
+      ctx.lineTo(x + w * 0.22, y + h * 0.88);
+      ctx.quadraticCurveTo(x + w * 0.06, y + h * 0.84, x + w * 0.08, y + h * 0.62);
       ctx.closePath();
+      ctx.fillStyle = pink;
       ctx.fill();
-      // Подошва
-      ctx.fillStyle = '#7a4b6a';
-      roundRect(ctx, x + w * 0.08, y + h * 0.88, w * 0.87, h * 0.08, 4);
-      ctx.fill();
-      // Помпон (пушистый, с глазами — в стиле "зверушки")
-      ctx.fillStyle = '#fff3f6';
+      ctx.strokeStyle = outline;
+      ctx.lineWidth = stroke;
+      ctx.lineJoin = 'round';
+      ctx.stroke();
+
+      // === Тень внутри отверстия для ноги (овал в верхней части) ===
       ctx.beginPath();
-      ctx.arc(x + w * 0.5, y + h * 0.3, h * 0.22, 0, Math.PI * 2);
+      ctx.ellipse(x + w * 0.5, y + h * 0.55, w * 0.3, h * 0.06, 0, 0, Math.PI * 2);
+      ctx.fillStyle = pinkDk;
       ctx.fill();
-      // Пушистость
-      for (let i = 0; i < 10; i++) {
-        const a = (i / 10) * Math.PI * 2;
+      ctx.strokeStyle = outline;
+      ctx.lineWidth = stroke * 0.6;
+      ctx.stroke();
+
+      // === Подошва — толстая тёмная полоса под башмачком ===
+      ctx.fillStyle = sole;
+      roundRect(ctx, x + w * 0.06, y + h * 0.86, w * 0.92, h * 0.08, 4);
+      ctx.fill();
+      ctx.strokeStyle = outline;
+      ctx.lineWidth = stroke * 0.7;
+      ctx.stroke();
+
+      // === Помпон — пушистый шар сверху, с чёткой формой ===
+      const cx = x + w * 0.5;
+      const cy = y + h * 0.28;
+      const rr = h * 0.22;
+      // Контурный круг
+      ctx.beginPath();
+      ctx.arc(cx, cy, rr, 0, Math.PI * 2);
+      ctx.fillStyle = fur;
+      ctx.fill();
+      ctx.strokeStyle = outline;
+      ctx.lineWidth = stroke;
+      ctx.stroke();
+      // Пушистые «волоски» по периметру (тёмные, для контраста)
+      ctx.strokeStyle = furShadow;
+      ctx.lineWidth = stroke * 0.5;
+      for (let i = 0; i < 16; i++) {
+        const a = (i / 16) * Math.PI * 2;
         ctx.beginPath();
-        ctx.arc(x + w * 0.5 + Math.cos(a) * h * 0.2, y + h * 0.3 + Math.sin(a) * h * 0.2, h * 0.06, 0, Math.PI * 2);
+        ctx.moveTo(cx + Math.cos(a) * rr * 0.85, cy + Math.sin(a) * rr * 0.85);
+        ctx.lineTo(cx + Math.cos(a) * (rr + h * 0.04), cy + Math.sin(a) * (rr + h * 0.04));
+        ctx.stroke();
+      }
+      // Маленькие комочки внутри помпона
+      ctx.fillStyle = furShadow;
+      for (const [ax, ay, ar] of [[-0.35, -0.1, 0.18], [0.3, -0.2, 0.16], [-0.1, 0.3, 0.18], [0.4, 0.2, 0.14]]) {
+        ctx.beginPath();
+        ctx.arc(cx + rr * ax, cy + rr * ay, rr * ar, 0, Math.PI * 2);
         ctx.fill();
       }
-      // Глазки на помпоне
-      ctx.fillStyle = '#1a0f08';
+
+      // === Меховая опушка по верхнему краю башмачка ===
+      ctx.fillStyle = fur;
       ctx.beginPath();
-      ctx.arc(x + w * 0.43, y + h * 0.28, h * 0.02, 0, Math.PI * 2);
-      ctx.arc(x + w * 0.57, y + h * 0.28, h * 0.02, 0, Math.PI * 2);
+      ctx.ellipse(x + w * 0.5, y + h * 0.5, w * 0.4, h * 0.05, 0, 0, Math.PI * 2);
       ctx.fill();
+      ctx.strokeStyle = outline;
+      ctx.lineWidth = stroke * 0.5;
+      ctx.stroke();
     });
   }
 
@@ -522,43 +648,110 @@ const Sprites = (() => {
 
   function drawFridge(ctx, x, y, w, h, flipped = false) {
     withFlip(ctx, x, y, w, h, flipped, () => {
-      // Корпус
-      ctx.fillStyle = '#ececec';
-      roundRect(ctx, x + w * 0.05, y, w * 0.9, h, 10);
+      // Палитра холодильника: молочно-белый корпус с холодным оттенком,
+      // плотный тёмно-синий контур, серебристые ручки.
+      const body = '#e8edf2';
+      const bodyShadow = '#c2ccd6';
+      const freezer = '#cfdce8';
+      const outline = '#1d2a3a';
+      const handle = '#2c3a4a';
+      const handleHi = '#a8b4c2';
+      const stroke = Math.max(2.5, Math.min(w, h) * 0.04);
+
+      // === Корпус ===
+      ctx.fillStyle = body;
+      roundRect(ctx, x + w * 0.05, y + h * 0.02, w * 0.9, h * 0.96, 10);
       ctx.fill();
-      ctx.strokeStyle = '#9a9a9a';
-      ctx.lineWidth = 2;
+      ctx.strokeStyle = outline;
+      ctx.lineWidth = stroke;
+      ctx.lineJoin = 'round';
       ctx.stroke();
-      // Тень сбоку
-      ctx.fillStyle = 'rgba(0,0,0,0.08)';
-      ctx.fillRect(x + w * 0.05, y, w * 0.06, h);
-      // Разделитель между отсеками (1/3 сверху — морозилка)
+
+      // Левая боковая «грань» с лёгкой тенью для объёма
+      ctx.fillStyle = bodyShadow;
+      roundRect(ctx, x + w * 0.05, y + h * 0.02, w * 0.08, h * 0.96, 10);
+      ctx.fill();
+
+      // === Морозильная камера (верхняя дверь, ~1/3) ===
       const splitY = y + h * 0.33;
-      ctx.strokeStyle = '#9a9a9a';
+      ctx.fillStyle = freezer;
+      roundRect(ctx, x + w * 0.08, y + h * 0.05, w * 0.84, h * 0.26, 6);
+      ctx.fill();
+      ctx.strokeStyle = outline;
+      ctx.lineWidth = stroke * 0.7;
+      ctx.stroke();
+
+      // Разделитель морозилки и холодильной камеры
       ctx.beginPath();
       ctx.moveTo(x + w * 0.05, splitY);
       ctx.lineTo(x + w * 0.95, splitY);
+      ctx.strokeStyle = outline;
+      ctx.lineWidth = stroke;
       ctx.stroke();
-      // Ручки дверей (тёмно-серые скобы)
-      ctx.fillStyle = '#4a4a4a';
-      ctx.fillRect(x + w * 0.78, y + h * 0.12, w * 0.05, h * 0.14);
-      ctx.fillRect(x + w * 0.78, y + h * 0.45, w * 0.05, h * 0.18);
-      // Морозилка (верх) — чуть темнее
-      ctx.fillStyle = 'rgba(120,160,200,0.18)';
-      roundRect(ctx, x + w * 0.08, y + 4, w * 0.84, h * 0.33 - 6, 8);
-      ctx.fill();
-      // Магнитик-украшение на средней двери
-      ctx.fillStyle = '#e03e3e';
+
+      // === Дверь нижней камеры (контур внутри корпуса) ===
+      ctx.strokeStyle = outline;
+      ctx.lineWidth = stroke * 0.7;
+      roundRect(ctx, x + w * 0.08, y + h * 0.36, w * 0.84, h * 0.6, 6);
+      ctx.stroke();
+
+      // === Ручки дверей (тёмные скобы с бликом) ===
+      const drawHandle = (hx, hy, hh) => {
+        ctx.fillStyle = handle;
+        roundRect(ctx, hx, hy, w * 0.045, hh, 3);
+        ctx.fill();
+        ctx.strokeStyle = outline;
+        ctx.lineWidth = stroke * 0.5;
+        ctx.stroke();
+        // Серебряный блик
+        ctx.fillStyle = handleHi;
+        ctx.fillRect(hx + w * 0.012, hy + hh * 0.1, w * 0.012, hh * 0.8);
+      };
+      // Верхняя ручка (на морозилке)
+      drawHandle(x + w * 0.78, y + h * 0.10, h * 0.16);
+      // Нижняя ручка (на холодильной камере)
+      drawHandle(x + w * 0.78, y + h * 0.42, h * 0.30);
+
+      // === Петли (на левой грани, по две на дверь) ===
+      ctx.fillStyle = outline;
+      const hingeX = x + w * 0.115;
+      const hingeW = w * 0.04;
+      const hingeH = h * 0.025;
+      for (const hy of [0.10, 0.27, 0.42, 0.86]) {
+        ctx.fillRect(hingeX, y + h * hy, hingeW, hingeH);
+      }
+
+      // === Сетка-вентиляция на морозилке ===
+      ctx.strokeStyle = outline;
+      ctx.lineWidth = Math.max(1, stroke * 0.3);
+      for (let i = 0; i < 3; i++) {
+        const gy = y + h * 0.23 + i * h * 0.025;
+        ctx.beginPath();
+        ctx.moveTo(x + w * 0.18, gy);
+        ctx.lineTo(x + w * 0.42, gy);
+        ctx.stroke();
+      }
+
+      // === Магнитики/декор на средней двери ===
+      ctx.fillStyle = '#e63946';
       ctx.beginPath();
-      ctx.arc(x + w * 0.3, y + h * 0.55, Math.min(w, h) * 0.04, 0, Math.PI * 2);
+      ctx.arc(x + w * 0.30, y + h * 0.50, Math.min(w, h) * 0.045, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = '#ffd14d';
+      ctx.strokeStyle = outline;
+      ctx.lineWidth = stroke * 0.5;
+      ctx.stroke();
+
+      ctx.fillStyle = '#fcbf49';
       ctx.beginPath();
-      ctx.arc(x + w * 0.38, y + h * 0.62, Math.min(w, h) * 0.035, 0, Math.PI * 2);
+      ctx.arc(x + w * 0.42, y + h * 0.62, Math.min(w, h) * 0.04, 0, Math.PI * 2);
       ctx.fill();
-      // Бренд-полоса
-      ctx.fillStyle = 'rgba(0,0,0,0.25)';
-      ctx.fillRect(x + w * 0.15, y + h * 0.23, w * 0.28, h * 0.03);
+      ctx.strokeStyle = outline;
+      ctx.stroke();
+
+      // Бренд-табличка
+      ctx.fillStyle = outline;
+      roundRect(ctx, x + w * 0.18, y + h * 0.82, w * 0.32, h * 0.05, 2);
+      ctx.fill();
     });
   }
 
