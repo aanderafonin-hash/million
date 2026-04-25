@@ -84,7 +84,9 @@ const PERFECT_TH = 10;
 const OK_TH = 35;
 const MISS_TH = 70;
 const GRAVITY = 0.6;
-const MAX_LEAN = 160;
+const MAX_LEAN = 150;
+const DOG_INTERVAL = 8;
+const DOG_EAT_LAYERS = 3;
 const SWAY_FRICTION = 0.96;
 const BASE_PTS = 100;
 const COMBO_MUL = 25;
@@ -104,6 +106,9 @@ let combo = 0, maxCombo = 0, perfectCount = 0, cumulativeLean = 0;
 let swayAngle = 0, swayVel = 0, cameraY = 0, targetCamY = 0, plateBaseY = 0;
 let stack = [], curIng = null, fallIng = null, colPieces = [], particles = [];
 let moveSpd = SPD_BASE, moveDir = 1, resultShown = false;
+// Dog state
+let dogActive = false, dogY = 0, dogTargetY = 0, dogPhase = 'hidden'; // hidden, rising, eating, leaving
+let dogEatTimer = 0, dropsSinceDog = 0, dogMouthOpen = 0;
 
 // ─── DPR-aware resize ───
 function resize() {
@@ -519,6 +524,7 @@ function startGame() {
     perfectCount = 0; cumulativeLean = 0; swayAngle = 0; swayVel = 0;
     cameraY = 0; targetCamY = 0; stack = []; particles = []; colPieces = [];
     moveSpd = SPD_BASE; resultShown = false;
+    dogActive = false; dogPhase = 'hidden'; dropsSinceDog = 0;
     showScreen('game');
     resize();
     stack.push({ ingredient: BOTTOM_BUN, height: BOTTOM_BUN.height, offX: 0 });
@@ -543,7 +549,7 @@ function dropIng() {
 function landIng() {
     const fi = fallIng, fcx = fi.x + fi.w / 2;
     const rawOff = fcx - fi.tCX;
-    const maxOff = ING_W * 0.5;
+    const maxOff = ING_W * 0.4;
     const off = Math.max(-maxOff, Math.min(maxOff, rawOff));
     const absOff = Math.abs(rawOff);
 
@@ -573,12 +579,20 @@ function landIng() {
         spawnP(px, py - cameraY, '#FF5252', 12);
     }
 
-    targetCamY = Math.max(0, -(lp.y - H * 0.55));
+    targetCamY = Math.min(0, lp.y - H * 0.6);
     moveSpd = Math.min(SPD_MAX, SPD_BASE + level * SPD_INC);
     fallIng = null; updateHUD();
 
+    dropsSinceDog++;
     if (Math.abs(cumulativeLean) >= MAX_LEAN) startCollapse();
-    else { gameState = 'playing'; spawnIng(); }
+    else {
+        // Maybe summon dog
+        if (dropsSinceDog >= DOG_INTERVAL && stack.length > DOG_EAT_LAYERS + 2 && !dogActive) {
+            summonDog();
+        } else {
+            gameState = 'playing'; spawnIng();
+        }
+    }
 }
 
 function startCollapse() {
@@ -611,6 +625,146 @@ function showResult() {
     showScreen('result');
 }
 
+// ─── Dog mechanic ───
+function playBarkSound() {
+    playTone(180, 0.08, 'sawtooth', 0.15);
+    setTimeout(() => playTone(220, 0.1, 'sawtooth', 0.15), 100);
+}
+function playMunchSound() {
+    for (let i = 0; i < 3; i++) setTimeout(() => playTone(120 + i * 30, 0.06, 'square', 0.1), i * 80);
+}
+
+function summonDog() {
+    dogActive = true; dogPhase = 'rising';
+    dogY = H + 100; // start below screen
+    const ps = stackPos();
+    // Target: rise up to the plate level
+    dogTargetY = plateBaseY - cameraY;
+    dogMouthOpen = 0;
+    dogEatTimer = 0;
+    gameState = 'dog';
+    playBarkSound();
+    showPraise('🐕 Ав-ав!', '#FFB74D');
+}
+
+function dogEatLayers() {
+    const toEat = Math.min(DOG_EAT_LAYERS, stack.length - 1);
+    if (toEat <= 0) return;
+    // Remove bottom layers (after the plate bun), create particles for eaten ones
+    const ps = stackPos();
+    for (let i = 1; i <= toEat; i++) {
+        if (ps[i]) spawnP(ps[i].cx, ps[i].y - cameraY, '#FFB74D', 5);
+    }
+    stack.splice(1, toEat);
+    // Reduce lean since bottom wobbles are gone
+    cumulativeLean *= 0.4;
+    playMunchSound();
+    dropsSinceDog = 0;
+}
+
+function drawDog(screenY) {
+    const cx = W / 2, w = 100, h = 80;
+    const y = screenY;
+    ctx.save();
+    ctx.translate(cx, y);
+
+    // Body (below the head, peeking from bottom)
+    ctx.fillStyle = '#8B6914';
+    ctx.beginPath();
+    ctx.ellipse(0, 30, 50, 35, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Head
+    const headG = ctx.createRadialGradient(-5, -5, 5, 0, 0, 40);
+    headG.addColorStop(0, '#C49A2A'); headG.addColorStop(1, '#8B6914');
+    ctx.fillStyle = headG;
+    ctx.beginPath();
+    ctx.ellipse(0, -5, 40, 32, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Ears (floppy)
+    ctx.fillStyle = '#6B4E0A';
+    ctx.beginPath(); ctx.ellipse(-32, -15, 14, 22, -0.3, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(32, -15, 14, 22, 0.3, 0, Math.PI * 2); ctx.fill();
+
+    // Snout
+    ctx.fillStyle = '#D4A843';
+    ctx.beginPath(); ctx.ellipse(0, 8, 22, 16, 0, 0, Math.PI * 2); ctx.fill();
+
+    // Mouth (opens when eating)
+    const mouthOpen = dogMouthOpen;
+    if (mouthOpen > 0) {
+        ctx.fillStyle = '#C62828';
+        ctx.beginPath(); ctx.ellipse(0, 14 + mouthOpen * 4, 15, 5 + mouthOpen * 8, 0, 0, Math.PI * 2); ctx.fill();
+        // Tongue
+        ctx.fillStyle = '#FF5252';
+        ctx.beginPath(); ctx.ellipse(0, 18 + mouthOpen * 6, 8, 4 + mouthOpen * 3, 0, 0, Math.PI); ctx.fill();
+    }
+
+    // Nose
+    ctx.fillStyle = '#333';
+    ctx.beginPath(); ctx.ellipse(0, 0, 7, 5, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+    ctx.beginPath(); ctx.ellipse(-2, -2, 2.5, 1.5, 0, 0, Math.PI * 2); ctx.fill();
+
+    // Eyes
+    ctx.fillStyle = '#222';
+    ctx.beginPath(); ctx.arc(-14, -12, 5.5, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(14, -12, 5.5, 0, Math.PI * 2); ctx.fill();
+    // Eye highlights
+    ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.arc(-12, -14, 2, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(16, -14, 2, 0, Math.PI * 2); ctx.fill();
+    // Pupils (looking up at burger)
+    ctx.fillStyle = '#444';
+    ctx.beginPath(); ctx.arc(-14, -14, 2.5, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(14, -14, 2.5, 0, Math.PI * 2); ctx.fill();
+
+    // Eyebrows (happy)
+    ctx.strokeStyle = '#6B4E0A'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(-14, -18, 8, Math.PI * 1.2, Math.PI * 1.8); ctx.stroke();
+    ctx.beginPath(); ctx.arc(14, -18, 8, Math.PI * 1.2, Math.PI * 1.8); ctx.stroke();
+
+    ctx.restore();
+}
+
+function updateDog() {
+    if (!dogActive) return;
+    if (dogPhase === 'rising') {
+        dogY -= 4;
+        const target = plateBaseY - cameraY + 10;
+        if (dogY <= target) {
+            dogY = target;
+            dogPhase = 'eating';
+            dogEatTimer = 0;
+        }
+    } else if (dogPhase === 'eating') {
+        dogEatTimer++;
+        dogMouthOpen = Math.min(1, dogEatTimer / 15);
+        if (dogEatTimer === 25) {
+            dogEatLayers();
+        }
+        if (dogEatTimer > 50) {
+            dogPhase = 'leaving';
+            dogMouthOpen = 0;
+        }
+    } else if (dogPhase === 'leaving') {
+        dogY += 5;
+        if (dogY > H + 100) {
+            dogActive = false;
+            dogPhase = 'hidden';
+            // Update camera for new stack height
+            const ps = stackPos();
+            if (ps.length > 0) {
+                const lp = ps[ps.length - 1];
+                targetCamY = Math.min(0, lp.y - H * 0.6);
+            }
+            gameState = 'playing';
+            spawnIng();
+        }
+    }
+}
+
 // ─── Loop ───
 function update() {
     cameraY += (targetCamY - cameraY) * CAM_SMOOTH;
@@ -634,6 +788,7 @@ function update() {
         if (fallIng.wY >= fallIng.tY) { fallIng.wY = fallIng.tY; fallIng.isTop ? landTopBun() : landIng(); }
     }
     if (gameState === 'collapsing') for (const p of colPieces) { p.vy += 0.5; p.x += p.vx; p.y += p.vy; p.a += p.va; }
+    updateDog();
     updateParticles();
 }
 
@@ -679,7 +834,9 @@ function draw() {
         ctx.fillStyle = 'rgba(255,255,255,0.45)'; ctx.font = '12px "Segoe UI",sans-serif'; ctx.textAlign = 'center';
         ctx.fillText(curIng.ing.name, curIng.x + curIng.w / 2, curIng.sY - 6);
     }
-    if (gameState === 'playing' || gameState === 'dropping') drawInstMeter();
+    if (gameState === 'playing' || gameState === 'dropping' || gameState === 'dog') drawInstMeter();
+    // Draw dog
+    if (dogActive) drawDog(dogY);
     drawParticles();
 }
 
