@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Бургер Башня</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Start Screen -->
+    <div id="screen-start" class="screen active">
+        <div class="screen-content">
+            <h1 class="game-title">🍔 Бургер Башня</h1>
+            <p class="subtitle">Собери самый высокий бургер!</p>
+            <div class="name-input-wrap">
+                <input type="text" id="player-name" placeholder="Введи своё имя" maxlength="20" autocomplete="off">
+            </div>
+            <button id="btn-play" class="btn btn-primary">Играть</button>
+            <button id="btn-leaderboard" class="btn btn-secondary">🏆 Рейтинг</button>
+        </div>
+    </div>
+
+    <!-- Leaderboard Screen -->
+    <div id="screen-leaderboard" class="screen">
+        <div class="screen-content">
+            <h2>🏆 Рейтинг игроков</h2>
+            <div id="leaderboard-list" class="leaderboard"></div>
+            <button id="btn-back-start" class="btn btn-secondary">← Назад</button>
+        </div>
+    </div>
+
+    <!-- Game Screen -->
+    <div id="screen-game" class="screen">
+        <div id="game-area">
+            <canvas id="game-canvas"></canvas>
+            <div id="game-hud">
+                <div class="hud-item" id="hud-score">Очки: <span>0</span></div>
+                <div class="hud-item" id="hud-level">Этаж: <span>0</span></div>
+                <div class="hud-item" id="hud-combo">Комбо: <span>x0</span></div>
+            </div>
+            <div id="praise-popup" class="praise hidden"></div>
+        </div>
+    </div>
+
+    <!-- Result Screen -->
+    <div id="screen-result" class="screen">
+        <div class="screen-content">
+            <h2 id="result-title">Игра окончена!</h2>
+            <div class="result-burger-icon">🍔</div>
+            <div class="result-stats">
+                <div class="stat-row"><span>Очки:</span><span id="result-score">0</span></div>
+                <div class="stat-row"><span>Этажей:</span><span id="result-levels">0</span></div>
+                <div class="stat-row"><span>Идеальных:</span><span id="result-perfect">0</span></div>
+                <div class="stat-row"><span>Макс. комбо:</span><span id="result-combo">0</span></div>
+            </div>
+            <div id="result-rank" class="result-rank"></div>
+            <button id="btn-retry" class="btn btn-primary">Ещё раз</button>
+            <button id="btn-result-leaderboard" class="btn btn-secondary">🏆 Рейтинг</button>
+            <button id="btn-result-menu" class="btn btn-secondary">Меню</button>
+        </div>
+    </div>
+
+    <script src="/sdk.js"></script>
+    <script src="game.js"></script>
+</body>
+</html>
