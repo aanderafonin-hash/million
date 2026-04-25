@@ -1144,26 +1144,30 @@ const Sprites = (() => {
   }
 
   function drawSkirt(ctx, s, item) {
-    // Юбка-трапеция, прижата к низу тела пекинеса.
+    // Юбка как горизонтальная «тутушка» вокруг крупа пекинеса:
+    // верхний край сидит на спине, нижний — оборкой свисает ниже живота.
     ctx.save();
     ctx.fillStyle = item.main;
     ctx.strokeStyle = item.dark;
     ctx.lineWidth = Math.max(1, s * 0.022);
-    // Параметры: пояс на уровне «талии», подол шире
-    const beltY = s * 0.66;
-    const hemY = s * 0.9;
-    const beltL = s * 0.32, beltR = s * 0.78;
-    const hemL = s * 0.22, hemR = s * 0.88;
+    // Талия (на спине): от рёбер до крупа
+    const waistL = s * 0.32, waistR = s * 0.66;
+    const waistY = s * 0.42;
+    // Подол (под животом): шире, чем талия
+    const hemL = s * 0.22, hemR = s * 0.74;
+    const hemY = s * 0.94;
+
     ctx.beginPath();
-    ctx.moveTo(beltL, beltY);
-    ctx.lineTo(beltR, beltY);
+    ctx.moveTo(waistL, waistY);
+    // Лёгкий изгиб по спине
+    ctx.quadraticCurveTo((waistL + waistR) / 2, waistY - s * 0.03, waistR, waistY);
     ctx.lineTo(hemR, hemY);
     // Волнистая нижняя кромка
     const segs = 8;
     for (let i = 1; i < segs; i++) {
       const t = i / segs;
       const x = hemR + (hemL - hemR) * t;
-      const y = hemY + (i % 2 === 0 ? 0 : -s * 0.018);
+      const y = hemY + (i % 2 === 0 ? 0 : -s * 0.02);
       ctx.lineTo(x, y);
     }
     ctx.lineTo(hemL, hemY);
@@ -1171,39 +1175,45 @@ const Sprites = (() => {
     ctx.fill();
     ctx.stroke();
 
-    // Пояс
+    // Пояс по верху
     ctx.fillStyle = item.dark;
-    roundRect(ctx, beltL - s * 0.005, beltY - s * 0.018, beltR - beltL + s * 0.01, s * 0.025, s * 0.012);
+    ctx.beginPath();
+    ctx.moveTo(waistL - s * 0.005, waistY);
+    ctx.quadraticCurveTo((waistL + waistR) / 2, waistY - s * 0.045, waistR + s * 0.005, waistY);
+    ctx.lineTo(waistR + s * 0.005, waistY + s * 0.022);
+    ctx.quadraticCurveTo((waistL + waistR) / 2, waistY - s * 0.02, waistL - s * 0.005, waistY + s * 0.022);
+    ctx.closePath();
     ctx.fill();
 
-    // Декор — зависит от подвида
     if (item.id === 'skirt-pink') {
-      // Оборки горизонтальные
+      // Горизонтальные оборки вдоль подола
       ctx.fillStyle = item.accent;
-      for (const ry of [0.74, 0.82]) {
+      for (const ty of [0.6, 0.72, 0.85]) {
         ctx.beginPath();
-        ctx.ellipse(s * 0.55, s * ry, s * 0.28 + (ry - 0.74) * s * 0.4, s * 0.012, 0, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.moveTo(s * (0.32 - (ty - 0.42) * 0.2), s * ty);
+        ctx.lineTo(s * (0.66 + (ty - 0.42) * 0.05), s * ty);
+        ctx.lineWidth = Math.max(1, s * 0.014);
+        ctx.strokeStyle = item.accent;
+        ctx.stroke();
       }
     } else if (item.id === 'skirt-blue') {
-      // Плиссе — вертикальные тёмные полосы
+      // Плиссе — вертикальные складки
       ctx.strokeStyle = item.accent;
       ctx.lineWidth = Math.max(1, s * 0.012);
       for (let i = 1; i <= 5; i++) {
         const t = i / 6;
-        const xTop = beltL + (beltR - beltL) * t;
+        const xTop = waistL + (waistR - waistL) * t;
         const xBot = hemL + (hemR - hemL) * t;
         ctx.beginPath();
-        ctx.moveTo(xTop, beltY + s * 0.01);
+        ctx.moveTo(xTop, waistY + s * 0.01);
         ctx.lineTo(xBot, hemY - s * 0.005);
         ctx.stroke();
       }
     } else if (item.id === 'skirt-plaid') {
-      // Чёрная клетка
       ctx.save();
       ctx.beginPath();
-      ctx.moveTo(beltL, beltY);
-      ctx.lineTo(beltR, beltY);
+      ctx.moveTo(waistL, waistY);
+      ctx.lineTo(waistR, waistY);
       ctx.lineTo(hemR, hemY);
       ctx.lineTo(hemL, hemY);
       ctx.closePath();
@@ -1211,20 +1221,24 @@ const Sprites = (() => {
       ctx.strokeStyle = item.accent;
       ctx.lineWidth = Math.max(1, s * 0.01);
       for (let i = 0; i < 6; i++) {
-        const y = beltY + (hemY - beltY) * (i / 5);
-        ctx.beginPath(); ctx.moveTo(s * 0.15, y); ctx.lineTo(s * 0.95, y); ctx.stroke();
+        const y = waistY + (hemY - waistY) * (i / 5);
+        ctx.beginPath(); ctx.moveTo(s * 0.15, y); ctx.lineTo(s * 0.85, y); ctx.stroke();
       }
       for (let i = 0; i < 7; i++) {
-        const x = s * 0.18 + i * s * 0.12;
-        ctx.beginPath(); ctx.moveTo(x, beltY); ctx.lineTo(x, hemY); ctx.stroke();
+        const x = s * 0.18 + i * s * 0.1;
+        ctx.beginPath(); ctx.moveTo(x, waistY); ctx.lineTo(x, hemY); ctx.stroke();
       }
       ctx.restore();
     } else if (item.id === 'skirt-tutu') {
-      // Балетная пачка — несколько слоёв полупрозрачных оборок
-      ctx.fillStyle = 'rgba(255,255,255,0.45)';
-      for (const dy of [-s * 0.02, 0, s * 0.02]) {
+      // Пачка — несколько слоёв «облачков» вокруг тела
+      ctx.fillStyle = 'rgba(255,255,255,0.55)';
+      for (const [cx, cy, rx, ry] of [
+        [0.43, 0.7, 0.14, 0.1],
+        [0.55, 0.78, 0.2, 0.11],
+        [0.46, 0.86, 0.16, 0.07],
+      ]) {
         ctx.beginPath();
-        ctx.ellipse(s * 0.55, s * 0.78 + dy, s * 0.36, s * 0.07, 0, 0, Math.PI * 2);
+        ctx.ellipse(s * cx, s * cy, s * rx, s * ry, 0, 0, Math.PI * 2);
         ctx.fill();
       }
     }
@@ -1232,126 +1246,157 @@ const Sprites = (() => {
   }
 
   function drawShorts(ctx, s, item) {
+    // Шорты вокруг крупа: широкая «талия» сверху, две короткие «штанины»
+    // спереди и сзади, обнимающие задние лапы пекинеса.
     ctx.save();
     ctx.fillStyle = item.main;
     ctx.strokeStyle = item.dark;
     ctx.lineWidth = Math.max(1, s * 0.022);
-    // Двe «штанины» вокруг лап
-    // Левая (передняя левая лапа в коде: x=0.5)
-    roundRect(ctx, s * 0.42, s * 0.66, s * 0.18, s * 0.14, s * 0.025);
-    ctx.fill();
-    ctx.stroke();
-    // Правая (x=0.66)
-    roundRect(ctx, s * 0.58, s * 0.66, s * 0.18, s * 0.14, s * 0.025);
-    ctx.fill();
-    ctx.stroke();
-    // Соединяющая «талия»
-    roundRect(ctx, s * 0.42, s * 0.62, s * 0.34, s * 0.07, s * 0.02);
+
+    // Основное тело шорт — горизонтальная «попона» под телом
+    ctx.beginPath();
+    ctx.moveTo(s * 0.34, s * 0.5);
+    ctx.quadraticCurveTo(s * 0.5, s * 0.46, s * 0.66, s * 0.5);
+    ctx.lineTo(s * 0.7, s * 0.78);
+    ctx.lineTo(s * 0.62, s * 0.84);
+    ctx.lineTo(s * 0.56, s * 0.78);
+    ctx.lineTo(s * 0.5, s * 0.84);
+    ctx.lineTo(s * 0.44, s * 0.78);
+    ctx.lineTo(s * 0.36, s * 0.84);
+    ctx.lineTo(s * 0.3, s * 0.78);
+    ctx.closePath();
     ctx.fill();
     ctx.stroke();
 
+    // Тёмный пояс по верху
+    ctx.fillStyle = item.dark;
+    ctx.beginPath();
+    ctx.moveTo(s * 0.33, s * 0.5);
+    ctx.quadraticCurveTo(s * 0.5, s * 0.46, s * 0.67, s * 0.5);
+    ctx.lineTo(s * 0.66, s * 0.54);
+    ctx.quadraticCurveTo(s * 0.5, s * 0.5, s * 0.34, s * 0.54);
+    ctx.closePath();
+    ctx.fill();
+
     if (item.id === 'shorts-denim') {
-      // Заклёпки и шов
+      // Заклёпки на поясе и боковой шов
       ctx.fillStyle = item.accent;
-      for (const cx of [0.48, 0.55, 0.62, 0.69]) {
+      for (const cx of [0.38, 0.46, 0.54, 0.62]) {
         ctx.beginPath();
-        ctx.arc(s * cx, s * 0.64, s * 0.01, 0, Math.PI * 2);
+        ctx.arc(s * cx, s * 0.51, s * 0.011, 0, Math.PI * 2);
         ctx.fill();
       }
       ctx.strokeStyle = item.accent;
-      ctx.lineWidth = Math.max(1, s * 0.008);
+      ctx.lineWidth = Math.max(1, s * 0.009);
       ctx.setLineDash([s * 0.015, s * 0.012]);
       ctx.beginPath();
-      ctx.moveTo(s * 0.59, s * 0.66); ctx.lineTo(s * 0.59, s * 0.79);
+      ctx.moveTo(s * 0.5, s * 0.54); ctx.lineTo(s * 0.5, s * 0.78);
       ctx.stroke();
       ctx.setLineDash([]);
     } else if (item.id === 'shorts-red') {
-      // Белые лампасы
+      // Белые лампасы вдоль боков
       ctx.fillStyle = item.accent;
-      ctx.fillRect(s * 0.43, s * 0.67, s * 0.16, s * 0.012);
-      ctx.fillRect(s * 0.59, s * 0.67, s * 0.16, s * 0.012);
+      ctx.fillRect(s * 0.34, s * 0.55, s * 0.32, s * 0.012);
+      ctx.fillRect(s * 0.34, s * 0.7, s * 0.32, s * 0.012);
     } else if (item.id === 'shorts-camo') {
       // Камуфляжные пятна
       ctx.fillStyle = item.accent;
-      const spots = [[0.46, 0.7], [0.5, 0.75], [0.55, 0.68], [0.62, 0.73], [0.68, 0.7], [0.72, 0.76]];
+      const spots = [[0.4, 0.58], [0.5, 0.6], [0.6, 0.56], [0.43, 0.7], [0.56, 0.72], [0.65, 0.66]];
       for (const [px, py] of spots) {
         ctx.beginPath();
-        ctx.ellipse(s * px, s * py, s * 0.025, s * 0.018, 0.5, 0, Math.PI * 2);
+        ctx.ellipse(s * px, s * py, s * 0.028, s * 0.02, 0.5, 0, Math.PI * 2);
         ctx.fill();
       }
     } else if (item.id === 'shorts-black') {
-      // Белая полоска по поясу
+      // Белая полоса по поясу
       ctx.fillStyle = item.accent;
-      ctx.fillRect(s * 0.42, s * 0.625, s * 0.34, s * 0.008);
+      ctx.beginPath();
+      ctx.moveTo(s * 0.34, s * 0.55);
+      ctx.quadraticCurveTo(s * 0.5, s * 0.51, s * 0.66, s * 0.55);
+      ctx.lineTo(s * 0.66, s * 0.56);
+      ctx.quadraticCurveTo(s * 0.5, s * 0.52, s * 0.34, s * 0.56);
+      ctx.closePath();
+      ctx.fill();
     }
     ctx.restore();
   }
 
   function drawDress(ctx, s, item) {
-    // Длинное вечернее платье: лиф (chest) + длинная юбка ниже.
+    // Вечернее платье: облегает корпус, шлейф длинной юбки тянется вниз
+    // и слегка назад от хвоста.
     ctx.save();
     ctx.fillStyle = item.main;
     ctx.strokeStyle = item.dark;
     ctx.lineWidth = Math.max(1, s * 0.022);
-    // Лиф — облегает грудь под мордочкой
+
+    // Лиф — облегает спину/грудь
     ctx.beginPath();
-    ctx.moveTo(s * 0.4, s * 0.58);
-    ctx.lineTo(s * 0.7, s * 0.58);
-    ctx.lineTo(s * 0.74, s * 0.66);
-    ctx.lineTo(s * 0.36, s * 0.66);
+    ctx.moveTo(s * 0.32, s * 0.42);
+    ctx.quadraticCurveTo(s * 0.5, s * 0.36, s * 0.7, s * 0.42);
+    ctx.lineTo(s * 0.74, s * 0.6);
+    ctx.lineTo(s * 0.3, s * 0.6);
     ctx.closePath();
     ctx.fill();
     ctx.stroke();
-    // V-вырез
+
+    // Воротник / V-вырез у основания шеи
     ctx.beginPath();
-    ctx.moveTo(s * 0.5, s * 0.58);
-    ctx.lineTo(s * 0.55, s * 0.62);
-    ctx.lineTo(s * 0.6, s * 0.58);
+    ctx.moveTo(s * 0.66, s * 0.42);
+    ctx.lineTo(s * 0.72, s * 0.5);
+    ctx.lineTo(s * 0.74, s * 0.43);
+    ctx.closePath();
     ctx.fillStyle = item.dark;
     ctx.fill();
-    // Длинная юбка платья
+
+    // Длинный шлейф — тянется от низа лифа к хвостовой части и под живот
     ctx.fillStyle = item.main;
     ctx.beginPath();
-    ctx.moveTo(s * 0.36, s * 0.66);
-    ctx.lineTo(s * 0.74, s * 0.66);
-    ctx.lineTo(s * 0.92, s * 0.94);
-    ctx.lineTo(s * 0.18, s * 0.94);
+    ctx.moveTo(s * 0.3, s * 0.6);
+    ctx.lineTo(s * 0.74, s * 0.6);
+    ctx.lineTo(s * 0.78, s * 0.86);
+    ctx.lineTo(s * 0.66, s * 0.94);
+    ctx.lineTo(s * 0.5, s * 0.92);
+    ctx.lineTo(s * 0.3, s * 0.95);
+    ctx.lineTo(s * 0.16, s * 0.86);
     ctx.closePath();
     ctx.fill();
     ctx.stroke();
 
     if (item.id === 'dress-red') {
-      // Тонкий золотой пояс
+      // Золотой поясок по низу лифа
       ctx.fillStyle = item.accent;
-      ctx.fillRect(s * 0.36, s * 0.65, s * 0.38, s * 0.012);
+      ctx.beginPath();
+      ctx.moveTo(s * 0.3, s * 0.59);
+      ctx.lineTo(s * 0.74, s * 0.59);
+      ctx.lineTo(s * 0.74, s * 0.61);
+      ctx.lineTo(s * 0.3, s * 0.61);
+      ctx.closePath();
+      ctx.fill();
     } else if (item.id === 'dress-black') {
-      // Звёзды
       ctx.fillStyle = item.accent;
-      for (const [px, py] of [[0.42, 0.72], [0.55, 0.78], [0.68, 0.74], [0.75, 0.85], [0.35, 0.86]]) {
+      for (const [px, py] of [[0.4, 0.5], [0.55, 0.46], [0.66, 0.52], [0.34, 0.78], [0.5, 0.82], [0.66, 0.78], [0.45, 0.68]]) {
         drawStar(ctx, s * px, s * py, s * 0.018, 5);
       }
     } else if (item.id === 'dress-gold') {
-      // Пайетки
       ctx.fillStyle = item.accent;
-      for (let i = 0; i < 22; i++) {
-        const px = 0.22 + Math.random() * 0.65;
-        const py = 0.7 + Math.random() * 0.22;
+      for (let i = 0; i < 28; i++) {
+        const px = 0.22 + Math.random() * 0.55;
+        const py = 0.45 + Math.random() * 0.45;
         ctx.beginPath();
         ctx.arc(s * px, s * py, s * 0.012, 0, Math.PI * 2);
         ctx.fill();
       }
     } else if (item.id === 'dress-lavender') {
-      // Белые цветочки по подолу
       ctx.fillStyle = item.accent;
-      for (const cx of [0.28, 0.43, 0.58, 0.73, 0.86]) {
+      for (const [cx, cy] of [[0.32, 0.78], [0.46, 0.86], [0.6, 0.82], [0.7, 0.7], [0.42, 0.55]]) {
         for (let p = 0; p < 5; p++) {
           const a = (p / 5) * Math.PI * 2;
           ctx.beginPath();
-          ctx.arc(s * cx + Math.cos(a) * s * 0.012, s * 0.88 + Math.sin(a) * s * 0.012, s * 0.008, 0, Math.PI * 2);
+          ctx.arc(s * cx + Math.cos(a) * s * 0.012, s * cy + Math.sin(a) * s * 0.012, s * 0.008, 0, Math.PI * 2);
           ctx.fill();
         }
         ctx.fillStyle = '#f3c940';
-        ctx.beginPath(); ctx.arc(s * cx, s * 0.88, s * 0.008, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(s * cx, s * cy, s * 0.008, 0, Math.PI * 2); ctx.fill();
         ctx.fillStyle = item.accent;
       }
     }
