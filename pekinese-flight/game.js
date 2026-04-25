@@ -21,6 +21,14 @@
   const BONE_COL_R = 22;
   const BONE_GROWTH = 0.05;    // +5% объёма за косточку
   const MAX_BONE_SCALE = 1.8;  // максимум — примерно в 1.8x
+  // Кошка-преследователь
+  const CAT_SIZE = 130;
+  const CAT_TRAIL_DX = 150;    // сколько пикселей кошка держится позади пекинеса по X
+  const CAT_FOLLOW = 0.04;     // насколько быстро кошка догоняет (0..1)
+  const CAT_SWIPE_INTERVAL = 2400; // интервал между атаками, мс
+  const CAT_SWIPE_WINDUP = 350;    // мс перед атакой (приседание)
+  const CAT_SWIPE_STRIKE = 200;    // мс непосредственно удара
+  const CAT_SWIPE_RECOVER = 350;   // мс возврата лапы
 
   const STATE = {
     MENU: 'menu',
@@ -144,6 +152,8 @@
     obstacles: [],
     bones: [],
     bonesCollected: 0,
+    cat: null,
+    deathCause: 'crash',
     scrollX: 0,
     obstaclesPassed: 0,
     groundOffset: 0,
@@ -292,11 +302,104 @@
     Game.obstaclesPassed = 0;
     Game.bonesCollected = 0;
     Game.pekinese = createPekinese();
+    Game.cat = createCat();
+    Game.deathCause = 'crash';
     Game.scrollX = 0;
     Game.cutscene = null;
     prepareInitialObstacles();
     setState(STATE.PLAYING);
     updateHud();
+  }
+
+  // ---------- Кошка-преследователь ----------
+  function createCat() {
+    return {
+      // Стартует слегка за левым краем, постепенно догоняет пекинеса по X.
+      x: -CAT_SIZE,
+      y: Game.height - FLOOR_H - CAT_SIZE * 0.32,
+      tailPhase: 0,
+      // Цикл атаки: idle -> windup -> strike -> recover -> idle
+      swipeT: -CAT_SWIPE_INTERVAL * 0.4,  // короткая отсрочка перед первой атакой
+      swipePhase: 'idle',
+      pawExt: 0,
+      // Лёгкие прыжки во время удара — для динамики
+      jumpY: 0,
+    };
+  }
+
+  function updateCat(dt) {
+    const cat = Game.cat;
+    const p = Game.pekinese;
+    if (!cat || !p) return;
+    cat.tailPhase += dt * 0.012;
+
+    // X: следуем за пекинесом, держась на CAT_TRAIL_DX позади.
+    const targetX = Math.max(40, p.x - CAT_TRAIL_DX);
+    cat.x += (targetX - cat.x) * CAT_FOLLOW;
+
+    // Y: подлетает выше когда атакует, прыгая под пекинеса.
+    const baseY = Game.height - FLOOR_H - CAT_SIZE * 0.32;
+    let targetY = baseY;
+    if (cat.swipePhase === 'strike') {
+      // Прыгает к Y пекинеса, насколько достаёт
+      const reach = CAT_SIZE * 0.55;
+      targetY = Math.max(p.y + 30, baseY - reach);
+    }
+    cat.y += (targetY - cat.y) * 0.18;
+
+    // Цикл атаки
+    cat.swipeT += dt;
+    switch (cat.swipePhase) {
+      case 'idle':
+        cat.pawExt = Math.max(0, cat.pawExt - dt * 0.005);
+        if (cat.swipeT >= CAT_SWIPE_INTERVAL) {
+          cat.swipeT = 0;
+          cat.swipePhase = 'windup';
+        }
+        break;
+      case 'windup': {
+        const k = Math.min(1, cat.swipeT / CAT_SWIPE_WINDUP);
+        cat.pawExt = -k * 0.15; // отводит лапу назад/прижимает
+        if (cat.swipeT >= CAT_SWIPE_WINDUP) {
+          cat.swipeT = 0;
+          cat.swipePhase = 'strike';
+        }
+        break;
+      }
+      case 'strike': {
+        const k = Math.min(1, cat.swipeT / CAT_SWIPE_STRIKE);
+        cat.pawExt = 0.4 + k * 0.6;
+        if (cat.swipeT >= CAT_SWIPE_STRIKE) {
+          cat.swipeT = 0;
+          cat.swipePhase = 'recover';
+        }
+        break;
+      }
+      case 'recover': {
+        const k = Math.min(1, cat.swipeT / CAT_SWIPE_RECOVER);
+        cat.pawExt = 1 - k;
+        if (cat.swipeT >= CAT_SWIPE_RECOVER) {
+          cat.swipeT = 0;
+          cat.swipePhase = 'idle';
+          cat.pawExt = 0;
+        }
+        break;
+      }
+    }
+  }
+
+  function hitsCatPaw(p) {
+    const cat = Game.cat;
+    if (!cat) return false;
+    // Опасна только в фазе 'strike' и при заметно вытянутой лапе.
+    if (cat.swipePhase !== 'strike' || cat.pawExt < 0.4) return false;
+    const paw = Sprites.catPawPos(CAT_SIZE, cat.pawExt);
+    const px = cat.x + paw.x;
+    const py = cat.y + paw.y;
+    const r = pekineseRadius() + paw.r;
+    const dx = p.x - px;
+    const dy = p.y - py;
+    return dx * dx + dy * dy < r * r;
   }
 
   // ---------- Коллизии ----------
@@ -355,7 +458,7 @@
     if (p.y < 20) { p.y = 20; p.vy = 0; }
     if (p.y > Game.height - FLOOR_H - 10) {
       p.y = Game.height - FLOOR_H - 10;
-      onDeath();
+      onDeath('crash');
       return;
     }
 
@@ -371,7 +474,9 @@
     Game.flapPhase += 0.2;
     p.chompTime = Math.max(0, p.chompTime - dt);
 
-    // Проверка пройденных и коллизий
+    // Кошка: движение + цикл атаки
+    updateCat(dt);
+    // Проверка пройденных и коллизий с препятствиями
     for (const ob of Game.obstacles) {
       if (!ob.passed && ob.x + OBSTACLE_W < p.x) {
         ob.passed = true;
@@ -381,9 +486,14 @@
         updateHud();
       }
       if (hitsObstacle(p, ob)) {
-        onDeath();
+        onDeath('crash');
         return;
       }
+    }
+    // Коллизия с лапой кошки во время strike
+    if (hitsCatPaw(p)) {
+      onDeath('cat');
+      return;
     }
 
     // Сбор косточек
@@ -413,6 +523,8 @@
   // ---------- Финальная сцена уровня ----------
   function startCutscene() {
     Game.state = STATE.CUTSCENE;
+    // Кошка отстаёт и убегает с экрана за кадр
+    Game.cat = null;
     Game.cutscene = {
       phase: 'approach',   // approach -> bone -> arms -> done
       t: 0,
@@ -499,9 +611,10 @@
     updateHud();
   }
 
-  function onDeath() {
+  function onDeath(cause = 'crash') {
     if (!Game.pekinese.alive) return;
     Game.pekinese.alive = false;
+    Game.deathCause = cause;
     Sound.hit();
     if (Game.score > Game.save.best) {
       Game.save.best = Game.score;
@@ -510,6 +623,12 @@
     setTimeout(() => {
       document.getElementById('over-stats').textContent =
         `Преодолено: ${Game.score}. Рекорд: ${Game.save.best}.`;
+      const titleEl = document.getElementById('over-title');
+      if (titleEl) {
+        titleEl.textContent = cause === 'cat'
+          ? 'Кошка цапнула пекинеса!'
+          : 'Ой! Пекинес врезался';
+      }
       setState(STATE.OVER);
     }, 600);
   }
@@ -534,6 +653,24 @@
     for (const ob of Game.obstacles) {
       Sprites.drawObstacle(ctx, ob.typeTop, ob.x, 0, OBSTACLE_W, ob.topH, true);
       Sprites.drawObstacle(ctx, ob.typeBottom, ob.x, ob.bottomY, OBSTACLE_W, ob.bottomH, false);
+    }
+
+    // Кошка-преследователь (на земле, под препятствиями по слою — но перед фоном)
+    if (Game.cat && (Game.state === STATE.PLAYING || Game.state === STATE.PAUSED)) {
+      const cat = Game.cat;
+      ctx.save();
+      ctx.translate(cat.x, cat.y);
+      // Лёгкий «приседающий» наклон при windup
+      if (cat.swipePhase === 'windup') ctx.scale(1, 0.95);
+      Sprites.drawCat(ctx, CAT_SIZE, cat.pawExt, cat.tailPhase);
+      ctx.restore();
+      // Тень под кошкой
+      ctx.save();
+      ctx.fillStyle = 'rgba(0,0,0,0.18)';
+      ctx.beginPath();
+      ctx.ellipse(cat.x, Game.height - FLOOR_H + 4, CAT_SIZE * 0.36, CAT_SIZE * 0.06, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
     }
 
     // Летающие косточки (пикапы) — только в процессе полёта

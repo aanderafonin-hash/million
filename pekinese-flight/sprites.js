@@ -755,6 +755,252 @@ const Sprites = (() => {
     });
   }
 
+  // ---------- Серая кошка-преследователь ----------
+  // Рисуется в локальной системе координат: центр кошки в (0,0), длина — size.
+  // pawExt: 0..1 — степень выпада лапы вперёд (0 = убрана, 1 = в выпаде).
+  // tailPhase — фаза махания хвостом.
+  function drawCat(ctx, size, pawExt = 0, tailPhase = 0) {
+    const s = size;
+    ctx.save();
+    // Палитра: тёмно-серая шерсть, светлый живот, розовый нос, чёрные полосы.
+    const fur = '#5a5550';
+    const furDk = '#34302c';
+    const belly = '#cfc8be';
+    const outline = '#1a1614';
+    const pink = '#f099a6';
+    const eye = '#3a8a2c';
+    const stroke = Math.max(1.5, s * 0.025);
+
+    // Хвост — машет назад вверх
+    const tw = Math.sin(tailPhase) * 0.35;
+    ctx.strokeStyle = fur;
+    ctx.lineWidth = s * 0.14;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(-s * 0.42, -s * 0.05);
+    ctx.quadraticCurveTo(-s * 0.62, -s * 0.30 + tw * s * 0.1, -s * 0.55, -s * 0.55 + tw * s * 0.15);
+    ctx.stroke();
+    ctx.strokeStyle = outline;
+    ctx.lineWidth = s * 0.16;
+    ctx.globalAlpha = 0.0;
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+
+    // Тело (овал, лежит горизонтально)
+    ctx.fillStyle = fur;
+    ctx.beginPath();
+    ctx.ellipse(-s * 0.05, s * 0.05, s * 0.42, s * 0.28, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = outline;
+    ctx.lineWidth = stroke * 1.4;
+    ctx.stroke();
+
+    // Светлое брюшко
+    ctx.fillStyle = belly;
+    ctx.beginPath();
+    ctx.ellipse(-s * 0.05, s * 0.18, s * 0.32, s * 0.14, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Полосы тёмно-серые на спине
+    ctx.strokeStyle = furDk;
+    ctx.lineWidth = s * 0.05;
+    for (let i = -2; i <= 1; i++) {
+      ctx.beginPath();
+      ctx.moveTo(i * s * 0.12 - s * 0.02, -s * 0.18);
+      ctx.lineTo(i * s * 0.12 - s * 0.05, -s * 0.06);
+      ctx.stroke();
+    }
+
+    // Задние лапы (две, под телом)
+    ctx.fillStyle = fur;
+    ctx.strokeStyle = outline;
+    ctx.lineWidth = stroke;
+    for (const dx of [-0.30, -0.12]) {
+      ctx.beginPath();
+      ctx.ellipse(s * dx, s * 0.32, s * 0.07, s * 0.08, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+    }
+    // Передняя стационарная лапа (правая, ближе к голове)
+    ctx.beginPath();
+    ctx.ellipse(s * 0.20, s * 0.32, s * 0.07, s * 0.08, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    // === Голова ===
+    const headX = s * 0.30;
+    const headY = -s * 0.10;
+    ctx.fillStyle = fur;
+    ctx.beginPath();
+    ctx.arc(headX, headY, s * 0.22, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = outline;
+    ctx.lineWidth = stroke * 1.4;
+    ctx.stroke();
+
+    // Уши (треугольники, симметричные)
+    ctx.fillStyle = fur;
+    for (const sgn of [-1, 1]) {
+      // База уха идёт вдоль макушки, вершина — вверх и наружу.
+      const baseInX = headX + sgn * s * 0.05;
+      const baseOutX = headX + sgn * s * 0.20;
+      const baseY = headY - s * 0.16;
+      const tipX = headX + sgn * s * 0.15;
+      const tipY = headY - s * 0.34;
+      ctx.beginPath();
+      ctx.moveTo(baseInX, baseY);
+      ctx.lineTo(tipX, tipY);
+      ctx.lineTo(baseOutX, baseY);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      // Внутренняя розовая часть (меньший треугольник внутри)
+      ctx.fillStyle = pink;
+      ctx.beginPath();
+      ctx.moveTo(baseInX + sgn * s * 0.015, baseY - s * 0.005);
+      ctx.lineTo(tipX, tipY + s * 0.06);
+      ctx.lineTo(baseOutX - sgn * s * 0.02, baseY - s * 0.005);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = fur;
+    }
+
+    // Глаза — зелёные, сужены (хищник)
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.arc(headX + s * 0.06, headY - s * 0.02, s * 0.045, 0, Math.PI * 2);
+    ctx.arc(headX + s * 0.18, headY - s * 0.02, s * 0.045, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = eye;
+    ctx.beginPath();
+    ctx.ellipse(headX + s * 0.06, headY - s * 0.02, s * 0.018, s * 0.04, 0, 0, Math.PI * 2);
+    ctx.ellipse(headX + s * 0.18, headY - s * 0.02, s * 0.018, s * 0.04, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Нос и рот
+    ctx.fillStyle = pink;
+    ctx.beginPath();
+    ctx.moveTo(headX + s * 0.12, headY + s * 0.04);
+    ctx.lineTo(headX + s * 0.16, headY + s * 0.04);
+    ctx.lineTo(headX + s * 0.14, headY + s * 0.08);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = outline;
+    ctx.lineWidth = stroke * 0.7;
+    ctx.beginPath();
+    ctx.moveTo(headX + s * 0.14, headY + s * 0.08);
+    ctx.lineTo(headX + s * 0.10, headY + s * 0.13);
+    ctx.moveTo(headX + s * 0.14, headY + s * 0.08);
+    ctx.lineTo(headX + s * 0.18, headY + s * 0.13);
+    ctx.stroke();
+
+    // Усы
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 1.5;
+    for (let i = -1; i <= 1; i++) {
+      ctx.beginPath();
+      ctx.moveTo(headX + s * 0.08, headY + s * 0.10 + i * s * 0.02);
+      ctx.lineTo(headX - s * 0.05, headY + s * 0.10 + i * s * 0.04);
+      ctx.moveTo(headX + s * 0.20, headY + s * 0.10 + i * s * 0.02);
+      ctx.lineTo(headX + s * 0.32, headY + s * 0.10 + i * s * 0.04);
+      ctx.stroke();
+    }
+    // Клык (видно когда нападает)
+    if (pawExt > 0.4) {
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      ctx.moveTo(headX + s * 0.12, headY + s * 0.10);
+      ctx.lineTo(headX + s * 0.16, headY + s * 0.10);
+      ctx.lineTo(headX + s * 0.14, headY + s * 0.16);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    // === Атакующая лапа ===
+    // Лапа вытягивается вперёд (вправо), на максимальной экстенсии — почти полная длина тела.
+    // pawExt: 0 -> поджата к телу, 1 -> полностью выпрямлена.
+    const pawReach = s * 0.55 * pawExt;
+    const pawX = s * 0.32 + pawReach;
+    const pawY = s * 0.05 - pawExt * s * 0.10;
+
+    // "Рука" (плечо) — линия от тела к лапе
+    ctx.strokeStyle = fur;
+    ctx.lineWidth = s * 0.12;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(s * 0.20, s * 0.20);
+    ctx.lineTo(pawX, pawY);
+    ctx.stroke();
+    ctx.strokeStyle = outline;
+    ctx.lineWidth = s * 0.14;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(s * 0.20, s * 0.20);
+    ctx.lineTo(pawX, pawY);
+    ctx.stroke();
+    // Шерстяная "рука"
+    ctx.strokeStyle = fur;
+    ctx.lineWidth = s * 0.10;
+    ctx.beginPath();
+    ctx.moveTo(s * 0.20, s * 0.20);
+    ctx.lineTo(pawX, pawY);
+    ctx.stroke();
+
+    // Сама лапка — серый комок с подушечками
+    ctx.fillStyle = fur;
+    ctx.beginPath();
+    ctx.arc(pawX, pawY, s * 0.10, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = outline;
+    ctx.lineWidth = stroke * 1.2;
+    ctx.stroke();
+    // Розовые подушечки (видны при выпаде)
+    if (pawExt > 0.2) {
+      ctx.fillStyle = pink;
+      ctx.beginPath();
+      ctx.arc(pawX + s * 0.03, pawY + s * 0.02, s * 0.025, 0, Math.PI * 2);
+      ctx.fill();
+      // Когти — белые острые штрихи вперёд
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = stroke * 1.2;
+      ctx.lineCap = 'round';
+      for (let i = -1; i <= 1; i++) {
+        ctx.beginPath();
+        const a = i * 0.35;
+        const cx = pawX + Math.cos(a) * s * 0.10;
+        const cy = pawY + Math.sin(a) * s * 0.10;
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(cx + Math.cos(a) * s * 0.12, cy + Math.sin(a) * s * 0.12);
+        ctx.stroke();
+      }
+      ctx.strokeStyle = outline;
+      ctx.lineWidth = stroke * 0.6;
+      for (let i = -1; i <= 1; i++) {
+        ctx.beginPath();
+        const a = i * 0.35;
+        const cx = pawX + Math.cos(a) * s * 0.10;
+        const cy = pawY + Math.sin(a) * s * 0.10;
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(cx + Math.cos(a) * s * 0.12, cy + Math.sin(a) * s * 0.12);
+        ctx.stroke();
+      }
+    }
+    ctx.lineCap = 'butt';
+    ctx.restore();
+  }
+
+  // Возвращает абсолютные координаты "когтистого центра" лапы относительно
+  // позиции, где будет нарисована кошка (translate(catX, catY)). Используется
+  // для проверки коллизии с пекинесом.
+  function catPawPos(size, pawExt) {
+    const s = size;
+    return {
+      x: s * 0.32 + s * 0.55 * pawExt,
+      y: s * 0.05 - pawExt * s * 0.10,
+      r: s * 0.13,
+    };
+  }
+
   const drawers = {
     // Активные препятствия
     fridge: drawFridge,
@@ -845,6 +1091,8 @@ const Sprites = (() => {
     drawOwner,
     drawBone,
     drawObstacle,
+    drawCat,
+    catPawPos,
     drawCloud,
     drawFloor,
     drawWallpaper,
