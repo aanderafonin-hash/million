@@ -280,31 +280,69 @@ const Sprites = (() => {
     ctx.translate(x, y);
     ctx.rotate(rot);
     const s = size;
-    ctx.fillStyle = '#fff6d8';
-    ctx.strokeStyle = '#8c6a2a';
-    ctx.lineWidth = Math.max(1, s * 0.04);
-    const r = s * 0.22;
-    // Тело кости (прямоугольник с закруглениями)
-    ctx.beginPath();
-    ctx.arc(-s * 0.45, -r, r, 0, Math.PI * 2);
-    ctx.arc(-s * 0.45, r, r, 0, Math.PI * 2);
-    ctx.arc(s * 0.45, -r, r, 0, Math.PI * 2);
-    ctx.arc(s * 0.45, r, r, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillRect(-s * 0.45, -s * 0.15, s * 0.9, s * 0.3);
-    // Контуры
-    ctx.beginPath();
-    ctx.moveTo(-s * 0.45, -s * 0.15);
-    ctx.lineTo(s * 0.45, -s * 0.15);
-    ctx.moveTo(-s * 0.45, s * 0.15);
-    ctx.lineTo(s * 0.45, s * 0.15);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.arc(-s * 0.45, -r, r, Math.PI, Math.PI * 2);
-    ctx.arc(-s * 0.45, r, r, 0, Math.PI);
-    ctx.arc(s * 0.45, -r, r, Math.PI, Math.PI * 2);
-    ctx.arc(s * 0.45, r, r, 0, Math.PI);
-    ctx.stroke();
+
+    // Параметры классического «собачьего» костяного силуэта.
+    const knobR = s * 0.22;        // радиус каждого «бугорка» (всего 4)
+    const endX = s * 0.42;         // смещение центра «эпифизов» от центра
+    const knobOff = s * 0.18;      // вертикальное смещение бугорков относительно оси
+    const shaftHalf = s * 0.13;    // полу-толщина «шахты» (диафиза)
+
+    // === 1) Тёмный «outline»: тот же силуэт, чуть увеличенный, нарисован
+    // одной заливкой -> формирует ровный контур без внутренних швов.
+    const outlineGrow = Math.max(1.5, s * 0.035);
+    const outline = new Path2D();
+    outline.arc(-endX, -knobOff, knobR + outlineGrow, 0, Math.PI * 2);
+    outline.arc(-endX, knobOff, knobR + outlineGrow, 0, Math.PI * 2);
+    outline.arc(endX, -knobOff, knobR + outlineGrow, 0, Math.PI * 2);
+    outline.arc(endX, knobOff, knobR + outlineGrow, 0, Math.PI * 2);
+    outline.rect(-endX, -shaftHalf - outlineGrow, endX * 2, shaftHalf * 2 + outlineGrow * 2);
+    ctx.fillStyle = '#5a3a18';
+    ctx.fill(outline);
+
+    // === 2) Сама кость — заполняем тем же силуэтом, но без увеличения,
+    // линейным градиентом для объёма.
+    const silhouette = new Path2D();
+    silhouette.arc(-endX, -knobOff, knobR, 0, Math.PI * 2);
+    silhouette.arc(-endX, knobOff, knobR, 0, Math.PI * 2);
+    silhouette.arc(endX, -knobOff, knobR, 0, Math.PI * 2);
+    silhouette.arc(endX, knobOff, knobR, 0, Math.PI * 2);
+    silhouette.rect(-endX, -shaftHalf, endX * 2, shaftHalf * 2);
+
+    const grad = ctx.createLinearGradient(0, -s * 0.4, 0, s * 0.4);
+    grad.addColorStop(0, '#fffaee');
+    grad.addColorStop(0.5, '#f3e2b2');
+    grad.addColorStop(1, '#cfa86a');
+    ctx.fillStyle = grad;
+    ctx.fill(silhouette);
+
+    // === 3) Внутренние блики/тени с клипом на силуэт.
+    ctx.save();
+    ctx.clip(silhouette);
+
+    // Тень снизу под каждым нижним бугорком
+    ctx.fillStyle = 'rgba(90,50,15,0.28)';
+    for (const cx of [-endX, endX]) {
+      ctx.beginPath();
+      ctx.ellipse(cx, knobOff + knobR * 0.55, knobR * 0.85, knobR * 0.35, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // Тонкая тень вдоль низа шахты
+    ctx.fillStyle = 'rgba(90,50,15,0.18)';
+    ctx.fillRect(-endX * 0.6, shaftHalf - s * 0.04, endX * 1.2, s * 0.04);
+
+    // Блик на каждом ВЕРХНЕМ бугорке (внутри окружности — не выходит за края)
+    ctx.fillStyle = 'rgba(255,255,255,0.65)';
+    for (const cx of [-endX, endX]) {
+      ctx.beginPath();
+      ctx.ellipse(cx - knobR * 0.25, -knobOff - knobR * 0.25, knobR * 0.55, knobR * 0.22, -0.45, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // Блик вдоль верхней кромки шахты — узкая полоска СТРОГО внутри ширины шахты
+    ctx.fillStyle = 'rgba(255,255,255,0.45)';
+    ctx.fillRect(-endX * 0.55, -shaftHalf + s * 0.005, endX * 1.1, s * 0.025);
+
+    ctx.restore();
+
     ctx.restore();
   }
 
