@@ -12,21 +12,28 @@
     <div class="logo">
       <span class="logo-mark">🎲</span>
       <span class="logo-text">Bet<span class="accent">Life</span></span>
-      <span class="logo-sub">ставки на жизнь</span>
+      <span class="logo-sub" data-i18n="tagline">ставки на жизнь</span>
     </div>
+
     <nav class="tabs" id="tabs">
-      <button class="tab active" data-cat="life">🎭 Жизнь</button>
-      <button class="tab" data-cat="sport">⚽ Спорт</button>
-      <button class="tab" data-cat="weird">🌀 Абсурд</button>
-      <button class="tab" data-cat="office">💼 Офис</button>
-      <button class="tab" data-cat="home">🏠 Дома</button>
-      <button class="tab" data-cat="mine">🧑‍🎨 Мои</button>
-      <button class="tab" data-cat="history">📜 История</button>
+      <button class="tab active" data-cat="life" data-i18n-html="🎭 {tab_life}"></button>
+      <button class="tab" data-cat="streams" data-i18n-html="🔴 {tab_streams}"></button>
+      <button class="tab" data-cat="sport" data-i18n-html="⚽ {tab_sport}"></button>
+      <button class="tab" data-cat="weird" data-i18n-html="🌀 {tab_weird}"></button>
+      <button class="tab" data-cat="office" data-i18n-html="💼 {tab_office}"></button>
+      <button class="tab" data-cat="home" data-i18n-html="🏠 {tab_home}"></button>
+      <button class="tab" data-cat="mine" data-i18n-html="🧑‍🎨 {tab_mine}"></button>
+      <button class="tab" data-cat="history" data-i18n-html="📜 {tab_history}"></button>
     </nav>
-    <div class="balance" title="Виртуальный баланс">
-      <span class="balance-label">Баланс</span>
-      <span class="balance-value" id="balance">10 000 ₽</span>
-      <button class="btn-small" id="reset-balance" title="Сбросить прогресс">⟲</button>
+
+    <div class="topbar-right">
+      <div class="lang-picker" title="Language">
+        <span id="lang-current">🌐 RU</span>
+        <select id="lang-select" aria-label="Language"></select>
+      </div>
+      <div id="auth-block">
+        <!-- filled dynamically: either "Sign in / Register" button or user chip -->
+      </div>
     </div>
   </header>
 
@@ -35,64 +42,147 @@
 
     <aside class="coupon">
       <div class="coupon-header">
-        <h2>Купон</h2>
-        <button class="btn-ghost" id="clear-coupon">Очистить</button>
+        <h2 data-i18n="coupon">Купон</h2>
+        <button class="btn-ghost" id="clear-coupon" data-i18n="clear">Очистить</button>
       </div>
       <div class="coupon-items" id="coupon-items">
-        <div class="coupon-empty">Выбери исход в любом событии, чтобы добавить его в купон.</div>
+        <div class="coupon-empty" data-i18n="empty_coupon">Выбери исход в любом событии, чтобы добавить его в купон.</div>
       </div>
       <div class="coupon-summary" id="coupon-summary" hidden>
-        <div class="row"><span>Событий</span><span id="coupon-count">0</span></div>
-        <div class="row"><span>Общий коэф.</span><span id="coupon-odds">1.00</span></div>
+        <div class="row"><span data-i18n="events_count">Событий</span><span id="coupon-count">0</span></div>
+        <div class="row"><span data-i18n="total_odds">Общий коэф.</span><span id="coupon-odds">1.00</span></div>
         <label class="stake-row">
-          <span>Ставка, ₽</span>
+          <span data-i18n="stake">Ставка, ₽</span>
           <input type="number" id="stake" min="10" step="10" value="100" />
         </label>
-        <div class="row big"><span>Возможный выигрыш</span><span id="coupon-win">100 ₽</span></div>
-        <button class="btn-primary" id="place-bet">Сделать ставку</button>
+        <div class="row big"><span data-i18n="possible_win">Возможный выигрыш</span><span id="coupon-win">100 ₽</span></div>
+        <button class="btn-primary" id="place-bet" data-i18n="place_bet">Сделать ставку</button>
       </div>
     </aside>
   </main>
 
-  <button class="fab" id="add-event-btn" title="Добавить своё событие">+ Создать событие</button>
+  <button class="fab" id="add-event-btn" title="Создать событие" data-i18n="add_event">+ Создать событие</button>
+
+  <!-- Modal: auth -->
+  <div class="modal-backdrop" id="auth-backdrop" hidden>
+    <div class="modal modal-narrow">
+      <div class="modal-head">
+        <h3 id="auth-title" data-i18n="login">Войти</h3>
+        <button class="btn-ghost" id="auth-close">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="auth-tabs">
+          <button class="auth-tab active" data-mode="login" data-i18n="login">Войти</button>
+          <button class="auth-tab" data-mode="register" data-i18n="register">Регистрация</button>
+        </div>
+        <div id="auth-avatar-row" class="auth-avatar-row" hidden>
+          <span class="hint" data-i18n="auth_choose_avatar">Выбери аватарку</span>
+          <div class="emoji-grid" id="emoji-grid"></div>
+        </div>
+        <label class="field">
+          <span data-i18n="auth_username">Имя пользователя</span>
+          <input type="text" id="auth-username" autocomplete="username" maxlength="30" />
+        </label>
+        <label class="field">
+          <span data-i18n="auth_password">Пароль</span>
+          <input type="password" id="auth-password" autocomplete="current-password" />
+        </label>
+        <div class="hint" id="auth-error" style="color: var(--red); display: none;"></div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn-ghost" id="auth-cancel" data-i18n="cancel">Отмена</button>
+        <button class="btn-primary" id="auth-submit" data-i18n="login">Войти</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: payment (top-up / withdraw) -->
+  <div class="modal-backdrop" id="payment-backdrop" hidden>
+    <div class="modal modal-narrow">
+      <div class="modal-head">
+        <h3 id="payment-title" data-i18n="payment_topup">Пополнение баланса</h3>
+        <button class="btn-ghost" id="payment-close">✕</button>
+      </div>
+      <div class="modal-body">
+        <label class="field">
+          <span data-i18n="amount">Сумма, ₽</span>
+          <input type="number" id="payment-amount" min="10" step="100" value="1000" />
+        </label>
+        <div class="quick-amounts" id="quick-amounts">
+          <button type="button" class="chip" data-amount="500">+500 ₽</button>
+          <button type="button" class="chip" data-amount="1000">+1 000 ₽</button>
+          <button type="button" class="chip" data-amount="5000">+5 000 ₽</button>
+          <button type="button" class="chip" data-amount="10000">+10 000 ₽</button>
+        </div>
+        <div class="hint" id="payment-error" style="color: var(--red); display: none;"></div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn-ghost" id="payment-cancel" data-i18n="cancel">Отмена</button>
+        <button class="btn-primary" id="payment-submit" data-i18n="confirm">Подтвердить</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Modal: add custom event -->
   <div class="modal-backdrop" id="modal-backdrop" hidden>
     <div class="modal">
       <div class="modal-head">
-        <h3>Новое событие</h3>
+        <h3 data-i18n="new_event">Новое событие</h3>
         <button class="btn-ghost" id="modal-close">✕</button>
       </div>
       <div class="modal-body">
         <label class="field">
-          <span>Название события</span>
-          <input type="text" id="f-title" placeholder="Например: Сосед Вася опоздает на работу" maxlength="120"/>
+          <span data-i18n="event_title">Название события</span>
+          <input type="text" id="f-title" data-i18n-attr="placeholder:event_title_ph" placeholder="Например: Сосед Вася опоздает на работу" maxlength="120"/>
         </label>
-        <label class="field">
-          <span>Категория</span>
-          <select id="f-category">
-            <option value="mine">🧑‍🎨 Мои</option>
-            <option value="life">🎭 Жизнь</option>
-            <option value="office">💼 Офис</option>
-            <option value="home">🏠 Дома</option>
-            <option value="weird">🌀 Абсурд</option>
-            <option value="sport">⚽ Спорт</option>
-          </select>
-        </label>
-        <label class="field">
-          <span>Описание (необязательно)</span>
-          <textarea id="f-desc" rows="2" placeholder="Любые детали и правила"></textarea>
-        </label>
-        <div class="outcomes" id="outcomes">
-          <!-- outcome rows injected -->
+        <div class="field-row">
+          <label class="field">
+            <span data-i18n="category">Категория</span>
+            <select id="f-category">
+              <option value="mine">🧑‍🎨 Mine</option>
+              <option value="life">🎭 Life</option>
+              <option value="office">💼 Office</option>
+              <option value="home">🏠 Home</option>
+              <option value="weird">🌀 Weird</option>
+              <option value="sport">⚽ Sport</option>
+            </select>
+          </label>
         </div>
-        <button class="btn-ghost" id="add-outcome">+ Добавить исход</button>
-        <div class="hint">Коэффициенты должны давать суммарную вероятность ≈ 100% (мы покажем, если «маржа» слишком большая).</div>
+        <label class="field">
+          <span data-i18n="description">Описание (необязательно)</span>
+          <textarea id="f-desc" rows="2" data-i18n-attr="placeholder:desc_ph" placeholder="Любые детали и правила"></textarea>
+        </label>
+
+        <div class="style-block">
+          <div class="hint" style="font-weight:600;color:var(--text)" data-i18n="style_event">Оформление события</div>
+          <div class="field-row">
+            <label class="field">
+              <span data-i18n="emoji">Эмодзи</span>
+              <input type="text" id="f-emoji" maxlength="2" value="🎯" />
+            </label>
+            <label class="field">
+              <span data-i18n="bg_color">Цвет фона</span>
+              <input type="color" id="f-bg1" value="#ff7a1a" />
+            </label>
+            <label class="field">
+              <span data-i18n="bg_gradient_2">Второй цвет</span>
+              <input type="color" id="f-bg2" value="#3a82f7" />
+            </label>
+          </div>
+          <label class="field">
+            <span data-i18n="upload">Загрузить картинку</span>
+            <input type="file" id="f-image" accept="image/*" />
+          </label>
+          <div class="card-preview" id="card-preview"></div>
+        </div>
+
+        <div class="outcomes" id="outcomes"></div>
+        <button class="btn-ghost" id="add-outcome" data-i18n="add_outcome">+ Добавить исход</button>
         <div class="hint" id="f-probsum"></div>
       </div>
       <div class="modal-foot">
-        <button class="btn-ghost" id="modal-cancel">Отмена</button>
-        <button class="btn-primary" id="modal-save">Сохранить</button>
+        <button class="btn-ghost" id="modal-cancel" data-i18n="cancel">Отмена</button>
+        <button class="btn-primary" id="modal-save" data-i18n="save">Сохранить</button>
       </div>
     </div>
   </div>
@@ -101,16 +191,49 @@
   <div class="modal-backdrop" id="resolve-backdrop" hidden>
     <div class="modal">
       <div class="modal-head">
-        <h3>🎲 Разрешение события</h3>
+        <h3 data-i18n="resolve_title">🎲 Результат</h3>
         <button class="btn-ghost" id="resolve-close">✕</button>
       </div>
       <div class="modal-body" id="resolve-body"></div>
     </div>
   </div>
 
+  <!-- Modal: live broadcast / chat -->
+  <div class="modal-backdrop" id="stream-backdrop" hidden>
+    <div class="modal modal-wide">
+      <div class="modal-head">
+        <h3 id="stream-title">🔴 LIVE</h3>
+        <button class="btn-ghost" id="stream-close">✕</button>
+      </div>
+      <div class="modal-body stream-body">
+        <div class="stream-left">
+          <div class="stream-canvas-wrap">
+            <div class="live-pill"><span class="live-dot"></span><span data-i18n="live">LIVE</span> · <span id="stream-viewers">0</span></div>
+            <iframe id="stream-iframe" frameborder="0" allowfullscreen sandbox="allow-scripts allow-same-origin allow-presentation" hidden></iframe>
+            <canvas id="stream-canvas" width="640" height="360"></canvas>
+            <div class="stream-status" id="stream-status"></div>
+          </div>
+          <div class="stream-meta" id="stream-meta"></div>
+        </div>
+        <div class="stream-right">
+          <div class="chat-header" data-i18n="stream_chat">Чат трансляции</div>
+          <div class="chat-list" id="chat-list"></div>
+          <form class="chat-form" id="chat-form">
+            <input type="text" id="chat-input" data-i18n-attr="placeholder:chat_ph" placeholder="Напишите комментарий…" maxlength="240" />
+            <button type="submit" class="btn-primary" data-i18n="send">Отправить</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Confetti canvas (overlay, non-interactive) -->
+  <canvas id="confetti" class="confetti-canvas"></canvas>
+
   <!-- Toast -->
   <div class="toast" id="toast" hidden></div>
 
+  <script src="i18n.js"></script>
   <script src="events.js"></script>
   <script src="app.js"></script>
 </body>
