@@ -1124,8 +1124,360 @@ const Sprites = (() => {
     }
   }
 
+  // ---------- Наряды ----------
+  // Все методы рисуют поверх drawPekinese в той же системе координат
+  // (origin в верхнем левом углу квадрата size×size, центр пекинеса (s/2, s/2)).
+  function drawOutfit(ctx, size, outfit) {
+    if (!outfit) return;
+    const s = size;
+    ctx.save();
+    ctx.translate(-s / 2, -s / 2);
+    if (outfit.body) drawBodyOutfit(ctx, s, outfit.body);
+    if (outfit.hat) drawHatOutfit(ctx, s, outfit.hat);
+    ctx.restore();
+  }
+
+  function drawBodyOutfit(ctx, s, item) {
+    if (item.sub === 'skirt') drawSkirt(ctx, s, item);
+    else if (item.sub === 'shorts') drawShorts(ctx, s, item);
+    else if (item.sub === 'dress') drawDress(ctx, s, item);
+  }
+
+  function drawSkirt(ctx, s, item) {
+    // Юбка-трапеция, прижата к низу тела пекинеса.
+    ctx.save();
+    ctx.fillStyle = item.main;
+    ctx.strokeStyle = item.dark;
+    ctx.lineWidth = Math.max(1, s * 0.022);
+    // Параметры: пояс на уровне «талии», подол шире
+    const beltY = s * 0.66;
+    const hemY = s * 0.9;
+    const beltL = s * 0.32, beltR = s * 0.78;
+    const hemL = s * 0.22, hemR = s * 0.88;
+    ctx.beginPath();
+    ctx.moveTo(beltL, beltY);
+    ctx.lineTo(beltR, beltY);
+    ctx.lineTo(hemR, hemY);
+    // Волнистая нижняя кромка
+    const segs = 8;
+    for (let i = 1; i < segs; i++) {
+      const t = i / segs;
+      const x = hemR + (hemL - hemR) * t;
+      const y = hemY + (i % 2 === 0 ? 0 : -s * 0.018);
+      ctx.lineTo(x, y);
+    }
+    ctx.lineTo(hemL, hemY);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // Пояс
+    ctx.fillStyle = item.dark;
+    roundRect(ctx, beltL - s * 0.005, beltY - s * 0.018, beltR - beltL + s * 0.01, s * 0.025, s * 0.012);
+    ctx.fill();
+
+    // Декор — зависит от подвида
+    if (item.id === 'skirt-pink') {
+      // Оборки горизонтальные
+      ctx.fillStyle = item.accent;
+      for (const ry of [0.74, 0.82]) {
+        ctx.beginPath();
+        ctx.ellipse(s * 0.55, s * ry, s * 0.28 + (ry - 0.74) * s * 0.4, s * 0.012, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    } else if (item.id === 'skirt-blue') {
+      // Плиссе — вертикальные тёмные полосы
+      ctx.strokeStyle = item.accent;
+      ctx.lineWidth = Math.max(1, s * 0.012);
+      for (let i = 1; i <= 5; i++) {
+        const t = i / 6;
+        const xTop = beltL + (beltR - beltL) * t;
+        const xBot = hemL + (hemR - hemL) * t;
+        ctx.beginPath();
+        ctx.moveTo(xTop, beltY + s * 0.01);
+        ctx.lineTo(xBot, hemY - s * 0.005);
+        ctx.stroke();
+      }
+    } else if (item.id === 'skirt-plaid') {
+      // Чёрная клетка
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(beltL, beltY);
+      ctx.lineTo(beltR, beltY);
+      ctx.lineTo(hemR, hemY);
+      ctx.lineTo(hemL, hemY);
+      ctx.closePath();
+      ctx.clip();
+      ctx.strokeStyle = item.accent;
+      ctx.lineWidth = Math.max(1, s * 0.01);
+      for (let i = 0; i < 6; i++) {
+        const y = beltY + (hemY - beltY) * (i / 5);
+        ctx.beginPath(); ctx.moveTo(s * 0.15, y); ctx.lineTo(s * 0.95, y); ctx.stroke();
+      }
+      for (let i = 0; i < 7; i++) {
+        const x = s * 0.18 + i * s * 0.12;
+        ctx.beginPath(); ctx.moveTo(x, beltY); ctx.lineTo(x, hemY); ctx.stroke();
+      }
+      ctx.restore();
+    } else if (item.id === 'skirt-tutu') {
+      // Балетная пачка — несколько слоёв полупрозрачных оборок
+      ctx.fillStyle = 'rgba(255,255,255,0.45)';
+      for (const dy of [-s * 0.02, 0, s * 0.02]) {
+        ctx.beginPath();
+        ctx.ellipse(s * 0.55, s * 0.78 + dy, s * 0.36, s * 0.07, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    ctx.restore();
+  }
+
+  function drawShorts(ctx, s, item) {
+    ctx.save();
+    ctx.fillStyle = item.main;
+    ctx.strokeStyle = item.dark;
+    ctx.lineWidth = Math.max(1, s * 0.022);
+    // Двe «штанины» вокруг лап
+    // Левая (передняя левая лапа в коде: x=0.5)
+    roundRect(ctx, s * 0.42, s * 0.66, s * 0.18, s * 0.14, s * 0.025);
+    ctx.fill();
+    ctx.stroke();
+    // Правая (x=0.66)
+    roundRect(ctx, s * 0.58, s * 0.66, s * 0.18, s * 0.14, s * 0.025);
+    ctx.fill();
+    ctx.stroke();
+    // Соединяющая «талия»
+    roundRect(ctx, s * 0.42, s * 0.62, s * 0.34, s * 0.07, s * 0.02);
+    ctx.fill();
+    ctx.stroke();
+
+    if (item.id === 'shorts-denim') {
+      // Заклёпки и шов
+      ctx.fillStyle = item.accent;
+      for (const cx of [0.48, 0.55, 0.62, 0.69]) {
+        ctx.beginPath();
+        ctx.arc(s * cx, s * 0.64, s * 0.01, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.strokeStyle = item.accent;
+      ctx.lineWidth = Math.max(1, s * 0.008);
+      ctx.setLineDash([s * 0.015, s * 0.012]);
+      ctx.beginPath();
+      ctx.moveTo(s * 0.59, s * 0.66); ctx.lineTo(s * 0.59, s * 0.79);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    } else if (item.id === 'shorts-red') {
+      // Белые лампасы
+      ctx.fillStyle = item.accent;
+      ctx.fillRect(s * 0.43, s * 0.67, s * 0.16, s * 0.012);
+      ctx.fillRect(s * 0.59, s * 0.67, s * 0.16, s * 0.012);
+    } else if (item.id === 'shorts-camo') {
+      // Камуфляжные пятна
+      ctx.fillStyle = item.accent;
+      const spots = [[0.46, 0.7], [0.5, 0.75], [0.55, 0.68], [0.62, 0.73], [0.68, 0.7], [0.72, 0.76]];
+      for (const [px, py] of spots) {
+        ctx.beginPath();
+        ctx.ellipse(s * px, s * py, s * 0.025, s * 0.018, 0.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    } else if (item.id === 'shorts-black') {
+      // Белая полоска по поясу
+      ctx.fillStyle = item.accent;
+      ctx.fillRect(s * 0.42, s * 0.625, s * 0.34, s * 0.008);
+    }
+    ctx.restore();
+  }
+
+  function drawDress(ctx, s, item) {
+    // Длинное вечернее платье: лиф (chest) + длинная юбка ниже.
+    ctx.save();
+    ctx.fillStyle = item.main;
+    ctx.strokeStyle = item.dark;
+    ctx.lineWidth = Math.max(1, s * 0.022);
+    // Лиф — облегает грудь под мордочкой
+    ctx.beginPath();
+    ctx.moveTo(s * 0.4, s * 0.58);
+    ctx.lineTo(s * 0.7, s * 0.58);
+    ctx.lineTo(s * 0.74, s * 0.66);
+    ctx.lineTo(s * 0.36, s * 0.66);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    // V-вырез
+    ctx.beginPath();
+    ctx.moveTo(s * 0.5, s * 0.58);
+    ctx.lineTo(s * 0.55, s * 0.62);
+    ctx.lineTo(s * 0.6, s * 0.58);
+    ctx.fillStyle = item.dark;
+    ctx.fill();
+    // Длинная юбка платья
+    ctx.fillStyle = item.main;
+    ctx.beginPath();
+    ctx.moveTo(s * 0.36, s * 0.66);
+    ctx.lineTo(s * 0.74, s * 0.66);
+    ctx.lineTo(s * 0.92, s * 0.94);
+    ctx.lineTo(s * 0.18, s * 0.94);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    if (item.id === 'dress-red') {
+      // Тонкий золотой пояс
+      ctx.fillStyle = item.accent;
+      ctx.fillRect(s * 0.36, s * 0.65, s * 0.38, s * 0.012);
+    } else if (item.id === 'dress-black') {
+      // Звёзды
+      ctx.fillStyle = item.accent;
+      for (const [px, py] of [[0.42, 0.72], [0.55, 0.78], [0.68, 0.74], [0.75, 0.85], [0.35, 0.86]]) {
+        drawStar(ctx, s * px, s * py, s * 0.018, 5);
+      }
+    } else if (item.id === 'dress-gold') {
+      // Пайетки
+      ctx.fillStyle = item.accent;
+      for (let i = 0; i < 22; i++) {
+        const px = 0.22 + Math.random() * 0.65;
+        const py = 0.7 + Math.random() * 0.22;
+        ctx.beginPath();
+        ctx.arc(s * px, s * py, s * 0.012, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    } else if (item.id === 'dress-lavender') {
+      // Белые цветочки по подолу
+      ctx.fillStyle = item.accent;
+      for (const cx of [0.28, 0.43, 0.58, 0.73, 0.86]) {
+        for (let p = 0; p < 5; p++) {
+          const a = (p / 5) * Math.PI * 2;
+          ctx.beginPath();
+          ctx.arc(s * cx + Math.cos(a) * s * 0.012, s * 0.88 + Math.sin(a) * s * 0.012, s * 0.008, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.fillStyle = '#f3c940';
+        ctx.beginPath(); ctx.arc(s * cx, s * 0.88, s * 0.008, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = item.accent;
+      }
+    }
+    ctx.restore();
+  }
+
+  function drawStar(ctx, cx, cy, r, points) {
+    ctx.beginPath();
+    for (let i = 0; i < points * 2; i++) {
+      const a = (i / (points * 2)) * Math.PI * 2 - Math.PI / 2;
+      const rad = i % 2 === 0 ? r : r * 0.45;
+      const x = cx + Math.cos(a) * rad;
+      const y = cy + Math.sin(a) * rad;
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  function drawHatOutfit(ctx, s, item) {
+    // Голова: центр (s*0.72, s*0.42), радиус s*0.2 → верх головы у y=s*0.22.
+    if (item.id === 'beret') {
+      // Красный беретик с помпоном, чуть набок
+      ctx.save();
+      ctx.translate(s * 0.72, s * 0.22);
+      ctx.rotate(-0.18);
+      ctx.fillStyle = item.main;
+      ctx.strokeStyle = item.dark;
+      ctx.lineWidth = Math.max(1, s * 0.022);
+      ctx.beginPath();
+      ctx.ellipse(0, 0, s * 0.16, s * 0.06, 0, 0, Math.PI * 2);
+      ctx.fill(); ctx.stroke();
+      // Купол
+      ctx.beginPath();
+      ctx.ellipse(s * 0.01, -s * 0.04, s * 0.13, s * 0.08, 0, Math.PI, 0);
+      ctx.fill(); ctx.stroke();
+      // Помпон
+      ctx.fillStyle = item.accent;
+      ctx.beginPath();
+      ctx.arc(s * 0.04, -s * 0.1, s * 0.025, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    } else if (item.id === 'cap') {
+      // Бейсболка с козырьком
+      ctx.save();
+      ctx.translate(s * 0.72, s * 0.24);
+      ctx.fillStyle = item.main;
+      ctx.strokeStyle = item.dark;
+      ctx.lineWidth = Math.max(1, s * 0.022);
+      // Купол
+      ctx.beginPath();
+      ctx.ellipse(0, 0, s * 0.13, s * 0.08, 0, Math.PI, 0);
+      ctx.fill(); ctx.stroke();
+      // Козырёк
+      ctx.beginPath();
+      ctx.ellipse(s * 0.08, s * 0.01, s * 0.13, s * 0.025, 0, 0, Math.PI);
+      ctx.fill(); ctx.stroke();
+      // Эмблема
+      ctx.fillStyle = item.accent;
+      ctx.beginPath();
+      ctx.arc(s * 0.0, -s * 0.04, s * 0.018, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    } else if (item.id === 'bow') {
+      // Розовый бантик на макушке
+      ctx.save();
+      ctx.translate(s * 0.7, s * 0.23);
+      ctx.fillStyle = item.main;
+      ctx.strokeStyle = item.dark;
+      ctx.lineWidth = Math.max(1, s * 0.018);
+      // Левый лепесток
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.quadraticCurveTo(-s * 0.08, -s * 0.05, -s * 0.09, 0);
+      ctx.quadraticCurveTo(-s * 0.08, s * 0.04, 0, 0);
+      ctx.fill(); ctx.stroke();
+      // Правый лепесток
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.quadraticCurveTo(s * 0.08, -s * 0.05, s * 0.09, 0);
+      ctx.quadraticCurveTo(s * 0.08, s * 0.04, 0, 0);
+      ctx.fill(); ctx.stroke();
+      // Узелок
+      ctx.fillStyle = item.dark;
+      roundRect(ctx, -s * 0.018, -s * 0.022, s * 0.036, s * 0.04, s * 0.008);
+      ctx.fill();
+      ctx.restore();
+    } else if (item.id === 'crown') {
+      // Золотая корона с зубцами
+      ctx.save();
+      ctx.translate(s * 0.72, s * 0.22);
+      ctx.fillStyle = item.main;
+      ctx.strokeStyle = item.dark;
+      ctx.lineWidth = Math.max(1, s * 0.02);
+      // База
+      const baseW = s * 0.22, baseH = s * 0.04;
+      roundRect(ctx, -baseW / 2, 0, baseW, baseH, s * 0.01);
+      ctx.fill(); ctx.stroke();
+      // Зубцы
+      ctx.beginPath();
+      const teeth = 5;
+      for (let i = 0; i < teeth; i++) {
+        const x0 = -baseW / 2 + i * (baseW / teeth);
+        const x1 = x0 + (baseW / teeth) / 2;
+        const x2 = x0 + (baseW / teeth);
+        ctx.moveTo(x0, 0);
+        ctx.lineTo(x1, -s * 0.07);
+        ctx.lineTo(x2, 0);
+      }
+      ctx.fill();
+      ctx.stroke();
+      // Драгоценные камни
+      ctx.fillStyle = item.accent;
+      for (let i = 0; i < teeth; i++) {
+        const x = -baseW / 2 + (i + 0.5) * (baseW / teeth);
+        ctx.beginPath();
+        ctx.arc(x, s * 0.018, s * 0.012, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+  }
+
   return {
     drawPekinese,
+    drawOutfit,
     drawOwner,
     drawBone,
     drawObstacle,

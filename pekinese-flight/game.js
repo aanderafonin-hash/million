@@ -33,6 +33,7 @@
   const STATE = {
     MENU: 'menu',
     LEVELS: 'levels',
+    WARDROBE: 'wardrobe',
     INTRO: 'intro',
     PLAYING: 'playing',
     PAUSED: 'paused',
@@ -45,12 +46,15 @@
   // ---------- Хранилище ----------
   const Storage = (() => {
     const KEY = 'pekinese_flight_save_v1';
+    const DEFAULT = { best: 0, unlocked: 1, completed: [], soundOn: true, outfit: { hat: null, body: null } };
     const load = () => {
+      let data = { ...DEFAULT };
       try {
         const raw = localStorage.getItem(KEY);
-        if (raw) return JSON.parse(raw);
+        if (raw) data = { ...DEFAULT, ...JSON.parse(raw) };
       } catch (_) {}
-      return { best: 0, unlocked: 1, completed: [], soundOn: true };
+      data.outfit = { hat: null, body: null, ...(data.outfit || {}) };
+      return data;
     };
     const save = (data) => {
       try { localStorage.setItem(KEY, JSON.stringify(data)); } catch (_) {}
@@ -160,9 +164,28 @@
     cutscene: null,
     timeMs: 0,
     flapPhase: 0,
+    wardrobeTab: 'hat',
 
     save: Storage.load(),
   };
+
+  // ---------- Наряд ----------
+  function findOutfitItem(category, id) {
+    if (!id) return null;
+    return (OUTFITS[category] || []).find(i => i.id === id) || null;
+  }
+  function getCurrentOutfit() {
+    return {
+      hat: findOutfitItem('hat', Game.save.outfit.hat),
+      body: findOutfitItem('body', Game.save.outfit.body),
+    };
+  }
+  function setOutfit(category, id) {
+    Game.save.outfit = { ...Game.save.outfit, [category]: id };
+    Storage.save(Game.save);
+    renderWardrobeGrid();
+    renderWardrobePreview();
+  }
 
   // ---------- Инициализация canvas ----------
   function setupCanvas() {
@@ -704,6 +727,7 @@
       ctx.rotate(p.rotation);
       ctx.scale(scale, scale);
       Sprites.drawPekinese(ctx, PEKINESE_SIZE, Game.flapPhase + (p.flapTime > 0 ? 2 : 0));
+      Sprites.drawOutfit(ctx, PEKINESE_SIZE, getCurrentOutfit());
       // Косточка в зубах, если забрана в финальной сцене
       if (Game.state === STATE.CUTSCENE && Game.cutscene.hasBone) {
         Sprites.drawBone(ctx, PEKINESE_SIZE * 0.35, -PEKINESE_SIZE * 0.05, 40);
@@ -757,13 +781,14 @@
     const show = {
       [STATE.MENU]: 'menu',
       [STATE.LEVELS]: 'levels',
+      [STATE.WARDROBE]: 'wardrobe',
       [STATE.INTRO]: 'intro',
       [STATE.PAUSED]: 'pause',
       [STATE.WIN]: 'win',
       [STATE.OVER]: 'over',
       [STATE.FINAL]: 'final',
     };
-    ['menu', 'levels', 'intro', 'pause', 'win', 'over', 'final'].forEach(id => {
+    ['menu', 'levels', 'wardrobe', 'intro', 'pause', 'win', 'over', 'final'].forEach(id => {
       document.getElementById(id).classList.toggle('hidden', show[s] !== id);
     });
     document.getElementById('hud').classList.toggle('hidden',
@@ -778,6 +803,58 @@
     }
 
     if (s === STATE.LEVELS) renderLevelGrid();
+    if (s === STATE.WARDROBE) {
+      renderWardrobeGrid();
+      renderWardrobePreview();
+    }
+  }
+
+  function renderWardrobePreview() {
+    const cv = document.getElementById('wardrobe-preview');
+    if (!cv) return;
+    const c = cv.getContext('2d');
+    c.clearRect(0, 0, cv.width, cv.height);
+    // Лёгкая рамка-подложка
+    c.fillStyle = '#fef9ed';
+    c.fillRect(0, 0, cv.width, cv.height);
+    c.save();
+    c.translate(cv.width / 2, cv.height / 2 + 20);
+    const size = Math.min(cv.width, cv.height) * 0.85;
+    Sprites.drawPekinese(c, size, 0);
+    Sprites.drawOutfit(c, size, getCurrentOutfit());
+    c.restore();
+  }
+
+  function renderWardrobeGrid() {
+    const grid = document.getElementById('wardrobe-grid');
+    if (!grid) return;
+    const tab = Game.wardrobeTab || 'hat';
+    const items = OUTFITS[tab] || [];
+    const selectedId = Game.save.outfit[tab];
+    grid.innerHTML = '';
+    for (const item of items) {
+      const cell = document.createElement('button');
+      cell.type = 'button';
+      cell.className = 'wardrobe__cell';
+      if (item.id === selectedId) cell.classList.add('is-selected');
+      const cv = document.createElement('canvas');
+      cv.width = 120; cv.height = 120;
+      const c = cv.getContext('2d');
+      c.fillStyle = '#f7e9c8';
+      c.fillRect(0, 0, cv.width, cv.height);
+      c.save();
+      c.translate(cv.width / 2, cv.height / 2 + 6);
+      Sprites.drawPekinese(c, 100, 0);
+      Sprites.drawOutfit(c, 100, tab === 'hat' ? { hat: item } : { body: item });
+      c.restore();
+      cell.appendChild(cv);
+      const label = document.createElement('span');
+      label.className = 'wardrobe__label';
+      label.textContent = item.name;
+      cell.appendChild(label);
+      cell.addEventListener('click', () => setOutfit(tab, item.id));
+      grid.appendChild(cell);
+    }
   }
 
   function updateHud() {
@@ -830,6 +907,17 @@
     });
     document.getElementById('btn-levels').addEventListener('click', () => setState(STATE.LEVELS));
     document.getElementById('btn-levels-back').addEventListener('click', () => setState(STATE.MENU));
+    document.getElementById('btn-wardrobe').addEventListener('click', () => setState(STATE.WARDROBE));
+    document.getElementById('btn-wardrobe-back').addEventListener('click', () => setState(STATE.MENU));
+    document.getElementById('btn-wardrobe-clear-hat').addEventListener('click', () => { setOutfit('hat', null); });
+    document.getElementById('btn-wardrobe-clear-body').addEventListener('click', () => { setOutfit('body', null); });
+    document.querySelectorAll('.ui-btn--tab').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.ui-btn--tab').forEach(b => b.classList.toggle('is-active', b === btn));
+        Game.wardrobeTab = btn.dataset.tab;
+        renderWardrobeGrid();
+      });
+    });
     document.getElementById('btn-intro-play').addEventListener('click', () => {
       startLevel(Game.currentLevel);
     });
