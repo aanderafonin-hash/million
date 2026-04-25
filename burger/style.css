@@ -53,7 +53,14 @@ body {
 .subtitle {
     font-size: 1.1em;
     color: #aaa;
-    margin-bottom: 30px;
+    margin-bottom: 8px;
+}
+
+.start-best {
+    font-size: 0.95em;
+    color: #FFD700;
+    margin-bottom: 20px;
+    min-height: 1.2em;
 }
 
 .name-input-wrap {
@@ -106,6 +113,15 @@ body {
 
 .btn-primary:hover {
     box-shadow: 0 6px 25px rgba(255, 107, 53, 0.6);
+}
+
+.btn-retry-glow {
+    animation: retryPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes retryPulse {
+    0%, 100% { box-shadow: 0 4px 15px rgba(255, 107, 53, 0.4); }
+    50% { box-shadow: 0 6px 30px rgba(255, 107, 53, 0.7), 0 0 15px rgba(255,150,50,0.3); }
 }
 
 .btn-secondary {
@@ -164,7 +180,7 @@ body {
     color: #ffba08;
 }
 
-/* Game Area — narrow centered field */
+/* Game Area */
 #screen-game {
     background: #0a0a1a;
 }
@@ -192,22 +208,44 @@ body {
     right: 0;
     display: flex;
     justify-content: center;
-    gap: 12px;
+    gap: 8px;
+    flex-wrap: wrap;
     z-index: 20;
     pointer-events: none;
 }
 
 .hud-item {
     background: rgba(0, 0, 0, 0.65);
-    padding: 6px 14px;
+    padding: 5px 12px;
     border-radius: 18px;
-    font-size: 0.85em;
+    font-size: 0.8em;
     backdrop-filter: blur(5px);
 }
 
 .hud-item span {
     font-weight: bold;
     color: #ffba08;
+}
+
+.hud-fever {
+    background: rgba(255, 70, 0, 0.7);
+    color: #FFD700;
+    font-weight: bold;
+    animation: feverPulse 0.5s ease-in-out infinite;
+}
+
+@keyframes feverPulse {
+    0%, 100% { transform: scale(1); background: rgba(255, 70, 0, 0.7); }
+    50% { transform: scale(1.08); background: rgba(255, 100, 0, 0.85); }
+}
+
+.hud-best {
+    background: rgba(255, 215, 0, 0.15);
+    border: 1px solid rgba(255, 215, 0, 0.3);
+}
+
+.hud-best span {
+    color: #FFD700;
 }
 
 /* Praise popup */
@@ -278,6 +316,15 @@ body {
     padding: 10px;
     border-radius: 10px;
     background: rgba(255, 215, 0, 0.1);
+}
+
+.result-best {
+    font-size: 0.9em;
+    margin: 8px 0;
+    padding: 8px;
+    border-radius: 8px;
+    background: rgba(255, 215, 0, 0.08);
+    color: #FFD700;
 }
 
 ::-webkit-scrollbar { width: 4px; }
