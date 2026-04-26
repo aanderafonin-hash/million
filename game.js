@@ -750,10 +750,6 @@
     drawMenuPaw(-78, 240);
     drawMenuPaw(78, 240);
 
-    // ---------- Long floppy ears (drawn first so head sits over them) ----------
-    drawMenuEar(-108, -20, -0.45 + earSway, false);
-    drawMenuEar(108, -20, 0.45 - earSway, true);
-
     // ---------- Head ----------
     // Skull (rounded, slightly wider on top, narrower toward muzzle)
     ctx.fillStyle = '#1a1108';
@@ -778,6 +774,10 @@
     ctx.beginPath();
     ctx.ellipse(-22, -82, 38, 24, -0.3, 0, Math.PI * 2);
     ctx.fill();
+
+    // ---------- Long floppy ears (after head so they hang over the cheeks) ----------
+    drawMenuEar(-104, -28, 0.18 + earSway, false);
+    drawMenuEar(104, -28, -0.18 - earSway, true);
 
     // ---------- Tan eyebrow dots (classic black-and-tan markings) ----------
     ctx.fillStyle = '#a86a2c';
@@ -858,40 +858,48 @@
   }
 
   function drawMenuEar(rootX, rootY, baseAngle, mirror) {
+    // The ear hangs straight DOWN from the root in its local frame.
+    // For the right side, mirror=true flips X so the curl direction is correct.
     ctx.save();
     ctx.translate(rootX, rootY);
-    ctx.rotate(baseAngle);
     if (mirror) ctx.scale(-1, 1);
+    ctx.rotate(baseAngle);
 
-    // Outer ear — very long teardrop hanging well below the head
+    // Long teardrop ear — hangs vertically, wider at the middle, rounded tip
     ctx.fillStyle = '#100a06';
     ctx.strokeStyle = '#000';
     ctx.lineWidth = 4;
     ctx.beginPath();
-    ctx.moveTo(0, -10);
-    ctx.bezierCurveTo(-30, 40, -56, 150, -42, 220);
-    ctx.bezierCurveTo(-18, 252, 38, 250, 52, 220);
-    ctx.bezierCurveTo(56, 140, 36, 40, 14, -10);
+    // Top edge — sits on the side of the head
+    ctx.moveTo(-26, 0);
+    ctx.quadraticCurveTo(-10, -16, 22, -10);
+    // Outer (away-from-head) curve, widening, then narrowing toward the tip
+    ctx.bezierCurveTo(46, 30, 56, 110, 38, 190);
+    // Rounded tip
+    ctx.quadraticCurveTo(20, 220, 0, 218);
+    ctx.quadraticCurveTo(-18, 215, -28, 195);
+    // Inner (head-side) curve back up
+    ctx.bezierCurveTo(-32, 130, -34, 60, -26, 0);
     ctx.closePath();
     ctx.fill();
     ctx.stroke();
 
     // Inner-ear warm tan tint near the base
-    ctx.fillStyle = 'rgba(168,106,44,0.55)';
+    ctx.fillStyle = 'rgba(168,106,44,0.6)';
     ctx.beginPath();
-    ctx.ellipse(2, 36, 16, 32, -0.1, 0, Math.PI * 2);
+    ctx.ellipse(0, 30, 16, 28, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // Subtle gloss on the front of the ear
-    const gloss = ctx.createLinearGradient(-10, 0, 40, 220);
+    // Subtle highlight along the outer edge
+    const gloss = ctx.createLinearGradient(20, 0, 40, 200);
     gloss.addColorStop(0, 'rgba(255,255,255,0.22)');
     gloss.addColorStop(1, 'rgba(255,255,255,0)');
     ctx.fillStyle = gloss;
     ctx.beginPath();
-    ctx.moveTo(0, -10);
-    ctx.bezierCurveTo(-30, 40, -56, 150, -42, 220);
-    ctx.bezierCurveTo(-18, 252, 38, 250, 52, 220);
-    ctx.bezierCurveTo(56, 140, 36, 40, 14, -10);
+    ctx.moveTo(22, -10);
+    ctx.bezierCurveTo(46, 30, 56, 110, 38, 190);
+    ctx.quadraticCurveTo(20, 220, 0, 218);
+    ctx.lineTo(22, -10);
     ctx.closePath();
     ctx.fill();
 
