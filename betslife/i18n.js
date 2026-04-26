@@ -1037,6 +1037,107 @@
     }
   };
 
+  // Extra keys added in v2 (backend-powered version). Only en + ru are
+  // translated; everything else falls back to English via `get`.
+  Object.assign(T.en, {
+    tab_all: 'All', tab_weather: 'Weather',
+    recover: 'Recover', reset_password: 'Reset password',
+    auth_recovery_code: 'Recovery code', auth_new_password: 'New password',
+    auth_fill_all: 'Fill all fields', auth_username_short: 'Username must be at least 3 chars',
+    auth_password_short: 'Password must be at least 3 chars',
+    err_network: 'Network error — backend unreachable',
+    err_401: 'Wrong credentials', err_taken: 'Username already taken',
+    err_generic: 'Something went wrong',
+    logged_in: 'Signed in as {name}', logged_out: 'Signed out',
+    recovery_save_title: 'Save your recovery code',
+    recovery_save_text: 'This is your one-time code to reset your password. Save it somewhere safe — you will not see it again.',
+    recovery_save_ok: "I've saved the code",
+    copy: 'Copy', copied: 'Copied',
+    profile: 'Profile',
+    ps_bets: 'Bets', ps_won: 'Won', ps_lost: 'Lost', ps_events: 'Created events',
+    profile_change_avatar: 'Change avatar',
+    profile_change_password: 'Change password',
+    profile_old_password: 'Current password', profile_new_password: 'New password',
+    profile_save_password: 'Save password', password_changed: 'Password changed',
+    profile_export: 'Export / import data',
+    export_data: 'Export JSON', import_data: 'Import',
+    exported: 'Exported', imported_summary: 'File contains {bets} bets and {txs} transactions',
+    import_invalid: 'Invalid file',
+    create_event: 'Create event', delete: 'Delete', deleted: 'Deleted',
+    delete_confirm: 'Delete this event?',
+    add_title: 'Title', add_desc: 'Description',
+    add_emoji: 'Emoji', add_color1: 'Color 1', add_color2: 'Color 2',
+    add_outcomes: 'Outcomes (probabilities are normalized)',
+    title_required: 'Title is required',
+    need_2_outcomes: 'Need at least 2 outcomes', max_outcomes: 'Maximum 8 outcomes',
+    invalid_outcomes: 'All outcomes must have a label and a probability',
+    default_yes: 'Yes', default_no: 'No', default_outcome: 'Other',
+    event_created: 'Event created',
+    event_preview_title: 'Event preview', event_preview_desc: 'Description appears here',
+    coupon_empty: 'Coupon is empty', stake_too_small: 'Minimum stake is 10', insufficient: 'Insufficient balance',
+    amount_too_small: 'Amount too small', toast_topup: 'Topped up {amount}', toast_withdraw: 'Withdrew {amount}',
+    bet_pending: 'Bet placed — wait for resolution',
+    bet_status_pending: 'Pending', bet_status_won: 'Won', bet_status_lost: 'Lost',
+    history_all: 'All', history_pending: 'Pending', history_won: 'Won', history_lost: 'Lost',
+    history_empty: 'No bets yet', login_to_see_history: 'Sign in to see your bet history',
+    empty_events: 'No events here yet.', empty_events_hint: 'Create one or check another tab.',
+    source_seed: 'Featured', source_user: 'Community', source_sportsdb: 'Live sport', source_weather: 'Weather',
+    stream_set_url: 'Set URL', stream_stop: 'End stream',
+    stream_started: 'Stream started', stream_stopped: 'Stream stopped',
+    prompt_stream_url: 'Paste a YouTube/Twitch URL (or leave empty for an animated placeholder)',
+    ok: 'OK',
+  });
+
+  Object.assign(T.ru, {
+    tab_all: 'Все', tab_weather: 'Погода',
+    recover: 'Восстановить', reset_password: 'Сбросить пароль',
+    auth_recovery_code: 'Код восстановления', auth_new_password: 'Новый пароль',
+    auth_fill_all: 'Заполни все поля', auth_username_short: 'Логин минимум 3 символа',
+    auth_password_short: 'Пароль минимум 3 символа',
+    err_network: 'Нет связи с сервером', err_401: 'Неверные данные',
+    err_taken: 'Логин уже занят', err_generic: 'Что-то пошло не так',
+    logged_in: 'Привет, {name}', logged_out: 'Вышел из аккаунта',
+    recovery_save_title: 'Сохрани код восстановления',
+    recovery_save_text: 'Это твой одноразовый код для сброса пароля. Сохрани его в надёжном месте — увидеть его повторно нельзя.',
+    recovery_save_ok: 'Я сохранил код',
+    copy: 'Копировать', copied: 'Скопировано',
+    profile: 'Профиль',
+    ps_bets: 'Ставок', ps_won: 'Выиграно', ps_lost: 'Проиграно', ps_events: 'Событий создал',
+    profile_change_avatar: 'Сменить аватар',
+    profile_change_password: 'Сменить пароль',
+    profile_old_password: 'Текущий пароль', profile_new_password: 'Новый пароль',
+    profile_save_password: 'Сохранить пароль', password_changed: 'Пароль обновлён',
+    profile_export: 'Экспорт / импорт данных',
+    export_data: 'Экспорт JSON', import_data: 'Импорт',
+    exported: 'Экспортировано',
+    imported_summary: 'Файл содержит {bets} ставок и {txs} транзакций',
+    import_invalid: 'Неверный файл',
+    create_event: 'Создать событие', delete: 'Удалить', deleted: 'Удалено',
+    delete_confirm: 'Удалить это событие?',
+    add_title: 'Заголовок', add_desc: 'Описание',
+    add_emoji: 'Эмодзи', add_color1: 'Цвет 1', add_color2: 'Цвет 2',
+    add_outcomes: 'Исходы (вероятности нормализуются)',
+    title_required: 'Заголовок обязателен',
+    need_2_outcomes: 'Нужно минимум 2 исхода', max_outcomes: 'Максимум 8 исходов',
+    invalid_outcomes: 'У всех исходов должны быть текст и вероятность',
+    default_yes: 'Да', default_no: 'Нет', default_outcome: 'Иначе',
+    event_created: 'Событие создано',
+    event_preview_title: 'Превью события', event_preview_desc: 'Описание появится здесь',
+    coupon_empty: 'Купон пуст', stake_too_small: 'Минимальная ставка 10', insufficient: 'Не хватает средств',
+    amount_too_small: 'Сумма слишком маленькая',
+    toast_topup: 'Пополнил на {amount}', toast_withdraw: 'Вывел {amount}',
+    bet_pending: 'Ставка принята — ждём результат',
+    bet_status_pending: 'Ожидает', bet_status_won: 'Выиграна', bet_status_lost: 'Проиграна',
+    history_all: 'Все', history_pending: 'Ожидают', history_won: 'Выиграны', history_lost: 'Проиграны',
+    history_empty: 'Ставок пока нет', login_to_see_history: 'Войди, чтобы увидеть свои ставки',
+    empty_events: 'В этой категории пока пусто.', empty_events_hint: 'Создай своё событие или загляни в другую вкладку.',
+    source_seed: 'BetLife', source_user: 'Сообщество', source_sportsdb: 'Live спорт', source_weather: 'Погода',
+    stream_set_url: 'Указать URL', stream_stop: 'Завершить трансляцию',
+    stream_started: 'Трансляция началась', stream_stopped: 'Трансляция завершена',
+    prompt_stream_url: 'Вставь ссылку YouTube/Twitch (или оставь пустым для анимированного плейсхолдера)',
+    ok: 'Ок',
+  });
+
   // RTL languages — used to set the document direction.
   const RTL = ['ar', 'he', 'fa', 'ur', 'ps', 'sd', 'yi', 'ug'];
 
@@ -1072,13 +1173,53 @@
     document.documentElement.dir = RTL.indexOf(lang) !== -1 ? 'rtl' : 'ltr';
   }
 
+  function dict() { return T[window.I18N.lang] || T.en; }
+  function fallback(key) { return T.en[key]; }
+
+  function applyToDom() {
+    document.querySelectorAll('[data-i18n]').forEach(function (el) {
+      var key = el.getAttribute('data-i18n');
+      var val = get(key);
+      if (val) el.textContent = val;
+    });
+    document.querySelectorAll('[data-i18n-html]').forEach(function (el) {
+      var tpl = el.getAttribute('data-i18n-html');
+      el.innerHTML = tpl.replace(/\{([a-z_0-9]+)\}/gi, function (_, k) { return get(k); });
+    });
+    var sub = document.getElementById('lang-current');
+    if (sub) sub.textContent = '🌐 ' + window.I18N.lang.toUpperCase();
+  }
+
+  function init(opts) {
+    opts = opts || {};
+    var sel = opts.select;
+    if (sel && !sel.options.length) {
+      LANGUAGES.forEach(function (l) {
+        var op = document.createElement('option');
+        op.value = l.code; op.textContent = l.code.toUpperCase() + ' · ' + l.name;
+        sel.appendChild(op);
+      });
+      sel.value = window.I18N.lang;
+      sel.addEventListener('change', function () {
+        set(sel.value);
+        applyToDom();
+        if (typeof opts.onChange === 'function') opts.onChange();
+      });
+    }
+    applyToDom();
+  }
+
   window.I18N = {
     LANGUAGES: LANGUAGES,
     SUPPORTED: Object.keys(T),
     RTL: RTL,
     lang: detect(),
     t: get,
-    set: set
+    set: set,
+    dict: dict,
+    fallback: fallback,
+    init: init,
+    apply: applyToDom,
   };
 
   // Apply doc direction & lang on load.

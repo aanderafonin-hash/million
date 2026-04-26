@@ -2,7 +2,8 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="theme-color" content="#0e1116" />
 <title>BetLife — ставки на жизнь</title>
 <link rel="stylesheet" href="style.css" />
 <link rel="icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><text y='50' font-size='52'>🎲</text></svg>" />
@@ -16,9 +17,11 @@
     </div>
 
     <nav class="tabs" id="tabs">
-      <button class="tab active" data-cat="life" data-i18n-html="🎭 {tab_life}"></button>
+      <button class="tab active" data-cat="all" data-i18n-html="🌐 {tab_all}"></button>
+      <button class="tab" data-cat="life" data-i18n-html="🎭 {tab_life}"></button>
       <button class="tab" data-cat="streams" data-i18n-html="🔴 {tab_streams}"></button>
       <button class="tab" data-cat="sport" data-i18n-html="⚽ {tab_sport}"></button>
+      <button class="tab" data-cat="weather" data-i18n-html="☔ {tab_weather}"></button>
       <button class="tab" data-cat="weird" data-i18n-html="🌀 {tab_weird}"></button>
       <button class="tab" data-cat="office" data-i18n-html="💼 {tab_office}"></button>
       <button class="tab" data-cat="home" data-i18n-html="🏠 {tab_home}"></button>
@@ -27,6 +30,7 @@
     </nav>
 
     <div class="topbar-right">
+      <input type="search" id="search-input" class="search-input" placeholder="🔎" autocomplete="off" />
       <div class="lang-picker" title="Language">
         <span id="lang-current">🌐 RU</span>
         <select id="lang-select" aria-label="Language"></select>
@@ -34,11 +38,18 @@
       <div id="auth-block">
         <!-- filled dynamically: either "Sign in / Register" button or user chip -->
       </div>
+      <button class="hamburger" id="hamburger" aria-label="Menu">☰</button>
     </div>
   </header>
 
   <main class="layout">
-    <section class="events" id="events"></section>
+    <section class="events" id="events">
+      <div class="empty-hint" id="empty-hint" hidden>
+        <div class="emoji" style="font-size:48px;line-height:1">🎲</div>
+        <div class="title" data-i18n="empty_events">Пока нет событий в этой категории.</div>
+        <div class="hint" data-i18n="empty_events_hint">Создай своё событие или загляни в другую вкладку.</div>
+      </div>
+    </section>
 
     <aside class="coupon">
       <div class="coupon-header">
@@ -53,7 +64,7 @@
         <div class="row"><span data-i18n="total_odds">Общий коэф.</span><span id="coupon-odds">1.00</span></div>
         <label class="stake-row">
           <span data-i18n="stake">Ставка, ₽</span>
-          <input type="number" id="stake" min="10" step="10" value="100" />
+          <input type="number" id="stake" min="10" step="10" value="100" inputmode="numeric" />
         </label>
         <div class="row big"><span data-i18n="possible_win">Возможный выигрыш</span><span id="coupon-win">100 ₽</span></div>
         <button class="btn-primary" id="place-bet" data-i18n="place_bet">Сделать ставку</button>
@@ -74,6 +85,7 @@
         <div class="auth-tabs">
           <button class="auth-tab active" data-mode="login" data-i18n="login">Войти</button>
           <button class="auth-tab" data-mode="register" data-i18n="register">Регистрация</button>
+          <button class="auth-tab" data-mode="recover" data-i18n="recover">Восстановить</button>
         </div>
         <div id="auth-avatar-row" class="auth-avatar-row" hidden>
           <span class="hint" data-i18n="auth_choose_avatar">Выбери аватарку</span>
@@ -83,15 +95,42 @@
           <span data-i18n="auth_username">Имя пользователя</span>
           <input type="text" id="auth-username" autocomplete="username" maxlength="30" />
         </label>
-        <label class="field">
+        <label class="field" id="auth-password-field">
           <span data-i18n="auth_password">Пароль</span>
           <input type="password" id="auth-password" autocomplete="current-password" />
         </label>
+        <label class="field" id="auth-recovery-field" hidden>
+          <span data-i18n="auth_recovery_code">Код восстановления</span>
+          <input type="text" id="auth-recovery-code" autocomplete="off" maxlength="20" />
+        </label>
+        <label class="field" id="auth-newpw-field" hidden>
+          <span data-i18n="auth_new_password">Новый пароль</span>
+          <input type="password" id="auth-new-password" autocomplete="new-password" />
+        </label>
         <div class="hint" id="auth-error" style="color: var(--red); display: none;"></div>
+        <div class="hint" id="auth-info" style="color: var(--green); display: none;"></div>
       </div>
       <div class="modal-foot">
         <button class="btn-ghost" id="auth-cancel" data-i18n="cancel">Отмена</button>
         <button class="btn-primary" id="auth-submit" data-i18n="login">Войти</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: recovery code shown after registration -->
+  <div class="modal-backdrop" id="recovery-shown-backdrop" hidden>
+    <div class="modal modal-narrow">
+      <div class="modal-head">
+        <h3 data-i18n="recovery_save_title">Сохрани код восстановления</h3>
+        <button class="btn-ghost" id="recovery-shown-close">✕</button>
+      </div>
+      <div class="modal-body">
+        <p data-i18n="recovery_save_text">Это твой одноразовый код для сброса пароля. Сохрани его в надёжном месте — увидеть его повторно нельзя.</p>
+        <div class="recovery-code" id="recovery-code-display">—</div>
+        <button class="btn-ghost" id="recovery-copy" data-i18n="copy">Копировать</button>
+      </div>
+      <div class="modal-foot">
+        <button class="btn-primary" id="recovery-shown-ok" data-i18n="recovery_save_ok">Я сохранил код</button>
       </div>
     </div>
   </div>
@@ -106,15 +145,15 @@
       <div class="modal-body">
         <label class="field">
           <span data-i18n="amount">Сумма, ₽</span>
-          <input type="number" id="payment-amount" min="10" step="100" value="1000" />
+          <input type="number" id="payment-amount" min="10" step="10" value="1000" inputmode="numeric" />
         </label>
-        <div class="quick-amounts" id="quick-amounts">
-          <button type="button" class="chip" data-amount="500">+500 ₽</button>
-          <button type="button" class="chip" data-amount="1000">+1 000 ₽</button>
-          <button type="button" class="chip" data-amount="5000">+5 000 ₽</button>
-          <button type="button" class="chip" data-amount="10000">+10 000 ₽</button>
+        <div class="quick-amounts" id="payment-quick">
+          <button data-amt="500">+500</button>
+          <button data-amt="1000">+1000</button>
+          <button data-amt="5000">+5000</button>
+          <button data-amt="10000">+10000</button>
         </div>
-        <div class="hint" id="payment-error" style="color: var(--red); display: none;"></div>
+        <div class="hint" id="payment-error" style="color:var(--red);display:none"></div>
       </div>
       <div class="modal-foot">
         <button class="btn-ghost" id="payment-cancel" data-i18n="cancel">Отмена</button>
@@ -123,118 +162,152 @@
     </div>
   </div>
 
-  <!-- Modal: add custom event -->
-  <div class="modal-backdrop" id="modal-backdrop" hidden>
+  <!-- Modal: profile drawer -->
+  <div class="modal-backdrop" id="profile-backdrop" hidden>
     <div class="modal">
       <div class="modal-head">
-        <h3 data-i18n="new_event">Новое событие</h3>
-        <button class="btn-ghost" id="modal-close">✕</button>
+        <h3 data-i18n="profile">Профиль</h3>
+        <button class="btn-ghost" id="profile-close">✕</button>
       </div>
       <div class="modal-body">
-        <label class="field">
-          <span data-i18n="event_title">Название события</span>
-          <input type="text" id="f-title" data-i18n-attr="placeholder:event_title_ph" placeholder="Например: Сосед Вася опоздает на работу" maxlength="120"/>
-        </label>
-        <div class="field-row">
-          <label class="field">
-            <span data-i18n="category">Категория</span>
-            <select id="f-category">
-              <option value="mine">🧑‍🎨 Mine</option>
-              <option value="life">🎭 Life</option>
-              <option value="office">💼 Office</option>
-              <option value="home">🏠 Home</option>
-              <option value="weird">🌀 Weird</option>
-              <option value="sport">⚽ Sport</option>
-            </select>
-          </label>
-        </div>
-        <label class="field">
-          <span data-i18n="description">Описание (необязательно)</span>
-          <textarea id="f-desc" rows="2" data-i18n-attr="placeholder:desc_ph" placeholder="Любые детали и правила"></textarea>
-        </label>
-
-        <div class="style-block">
-          <div class="hint" style="font-weight:600;color:var(--text)" data-i18n="style_event">Оформление события</div>
-          <div class="field-row">
-            <label class="field">
-              <span data-i18n="emoji">Эмодзи</span>
-              <input type="text" id="f-emoji" maxlength="2" value="🎯" />
-            </label>
-            <label class="field">
-              <span data-i18n="bg_color">Цвет фона</span>
-              <input type="color" id="f-bg1" value="#ff7a1a" />
-            </label>
-            <label class="field">
-              <span data-i18n="bg_gradient_2">Второй цвет</span>
-              <input type="color" id="f-bg2" value="#3a82f7" />
-            </label>
+        <div class="profile-row">
+          <div class="profile-avatar" id="profile-avatar">🦊</div>
+          <div>
+            <div class="profile-username" id="profile-username">user</div>
+            <div class="profile-balance" id="profile-balance">0 ₽</div>
           </div>
-          <label class="field">
-            <span data-i18n="upload">Загрузить картинку</span>
-            <input type="file" id="f-image" accept="image/*" />
-          </label>
-          <div class="card-preview" id="card-preview"></div>
         </div>
-
-        <div class="outcomes" id="outcomes"></div>
-        <button class="btn-ghost" id="add-outcome" data-i18n="add_outcome">+ Добавить исход</button>
-        <div class="hint" id="f-probsum"></div>
+        <div class="profile-stats" id="profile-stats">
+          <div><b id="ps-bets">0</b><span data-i18n="ps_bets">Ставок</span></div>
+          <div><b id="ps-won">0</b><span data-i18n="ps_won">Выиграно</span></div>
+          <div><b id="ps-lost">0</b><span data-i18n="ps_lost">Проиграно</span></div>
+          <div><b id="ps-events">0</b><span data-i18n="ps_events">Событий создал</span></div>
+        </div>
+        <div class="section-title" data-i18n="profile_change_avatar">Сменить аватар</div>
+        <div class="emoji-grid" id="profile-emoji-grid"></div>
+        <div class="section-title" data-i18n="profile_change_password">Сменить пароль</div>
+        <label class="field">
+          <span data-i18n="profile_old_password">Текущий пароль</span>
+          <input type="password" id="profile-old-password" />
+        </label>
+        <label class="field">
+          <span data-i18n="profile_new_password">Новый пароль</span>
+          <input type="password" id="profile-new-password" />
+        </label>
+        <button class="btn-ghost" id="profile-change-pw" data-i18n="profile_save_password">Сохранить пароль</button>
+        <div class="section-title" data-i18n="profile_export">Экспорт / импорт данных</div>
+        <div class="row-buttons">
+          <button class="btn-ghost" id="profile-export" data-i18n="export_data">Экспорт JSON</button>
+          <button class="btn-ghost" id="profile-import" data-i18n="import_data">Импорт</button>
+          <input type="file" id="profile-import-file" accept="application/json" hidden />
+        </div>
+        <div class="hint" id="profile-msg" style="display:none"></div>
       </div>
       <div class="modal-foot">
-        <button class="btn-ghost" id="modal-cancel" data-i18n="cancel">Отмена</button>
-        <button class="btn-primary" id="modal-save" data-i18n="save">Сохранить</button>
+        <button class="btn-ghost" id="profile-logout" data-i18n="logout">Выйти</button>
       </div>
     </div>
   </div>
 
-  <!-- Modal: resolve event (simulate outcome) -->
-  <div class="modal-backdrop" id="resolve-backdrop" hidden>
+  <!-- Modal: create event -->
+  <div class="modal-backdrop" id="add-backdrop" hidden>
     <div class="modal">
       <div class="modal-head">
-        <h3 data-i18n="resolve_title">🎲 Результат</h3>
+        <h3 data-i18n="create_event">Создать событие</h3>
+        <button class="btn-ghost" id="add-close">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="event-preview" id="event-preview">
+          <div class="event-preview-emoji" id="ep-emoji">🎯</div>
+          <div>
+            <div class="event-preview-title" id="ep-title" data-i18n="event_preview_title">Превью события</div>
+            <div class="event-preview-desc" id="ep-desc" data-i18n="event_preview_desc">Описание появится здесь</div>
+          </div>
+        </div>
+        <label class="field">
+          <span data-i18n="add_title">Заголовок</span>
+          <input type="text" id="add-title" maxlength="140" />
+        </label>
+        <label class="field">
+          <span data-i18n="add_desc">Описание</span>
+          <textarea id="add-desc" rows="2" maxlength="500"></textarea>
+        </label>
+        <div class="row-fields">
+          <label class="field">
+            <span data-i18n="add_emoji">Эмодзи</span>
+            <input type="text" id="add-emoji" value="🎯" maxlength="4" />
+          </label>
+          <label class="field">
+            <span data-i18n="add_color1">Цвет 1</span>
+            <input type="color" id="add-color1" value="#ff7a18" />
+          </label>
+          <label class="field">
+            <span data-i18n="add_color2">Цвет 2</span>
+            <input type="color" id="add-color2" value="#3a8dff" />
+          </label>
+        </div>
+        <div class="section-title" data-i18n="add_outcomes">Исходы (вероятности нормализуются)</div>
+        <div id="outcomes-list"></div>
+        <button class="btn-ghost" id="add-outcome-btn" data-i18n="add_outcome">+ Добавить исход</button>
+        <div class="hint" id="add-error" style="color:var(--red);display:none"></div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn-ghost" id="add-cancel" data-i18n="cancel">Отмена</button>
+        <button class="btn-primary" id="add-submit" data-i18n="save">Сохранить</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: bet result -->
+  <div class="modal-backdrop" id="resolve-backdrop" hidden>
+    <div class="modal modal-narrow">
+      <div class="modal-head">
+        <h3 id="resolve-title">—</h3>
         <button class="btn-ghost" id="resolve-close">✕</button>
       </div>
       <div class="modal-body" id="resolve-body"></div>
+      <div class="modal-foot">
+        <button class="btn-primary" id="resolve-ok" data-i18n="ok">Ок</button>
+      </div>
     </div>
   </div>
 
-  <!-- Modal: live broadcast / chat -->
+  <!-- Modal: stream + chat -->
   <div class="modal-backdrop" id="stream-backdrop" hidden>
     <div class="modal modal-wide">
       <div class="modal-head">
-        <h3 id="stream-title">🔴 LIVE</h3>
-        <button class="btn-ghost" id="stream-close">✕</button>
+        <h3 id="stream-title">—</h3>
+        <div>
+          <span class="live-indicator"><span class="dot"></span><span id="stream-viewers">0</span></span>
+          <button class="btn-ghost" id="stream-close">✕</button>
+        </div>
       </div>
       <div class="modal-body stream-body">
-        <div class="stream-left">
-          <div class="stream-canvas-wrap">
-            <div class="live-pill"><span class="live-dot"></span><span data-i18n="live">LIVE</span> · <span id="stream-viewers">0</span></div>
-            <iframe id="stream-iframe" frameborder="0" allowfullscreen sandbox="allow-scripts allow-same-origin allow-presentation" hidden></iframe>
-            <canvas id="stream-canvas" width="640" height="360"></canvas>
-            <div class="stream-status" id="stream-status"></div>
-          </div>
-          <div class="stream-meta" id="stream-meta"></div>
+        <div class="stream-video" id="stream-video">
+          <canvas id="stream-canvas" width="640" height="360"></canvas>
+          <iframe id="stream-iframe" hidden></iframe>
         </div>
-        <div class="stream-right">
-          <div class="chat-header" data-i18n="stream_chat">Чат трансляции</div>
-          <div class="chat-list" id="chat-list"></div>
-          <form class="chat-form" id="chat-form">
-            <input type="text" id="chat-input" data-i18n-attr="placeholder:chat_ph" placeholder="Напишите комментарий…" maxlength="240" />
-            <button type="submit" class="btn-primary" data-i18n="send">Отправить</button>
-          </form>
+        <div class="stream-controls" id="stream-controls">
+          <button class="btn-ghost" id="stream-set-url" data-i18n="stream_set_url">Указать URL</button>
+          <button class="btn-ghost" id="stream-stop" hidden data-i18n="stream_stop">Завершить трансляцию</button>
+        </div>
+        <div class="chat">
+          <div class="chat-messages" id="chat-messages"></div>
+          <div class="chat-input">
+            <input type="text" id="chat-text" maxlength="500" placeholder="..." />
+            <button class="btn-primary" id="chat-send" data-i18n="send">Отправить</button>
+          </div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Confetti canvas (overlay, non-interactive) -->
-  <canvas id="confetti" class="confetti-canvas"></canvas>
-
-  <!-- Toast -->
-  <div class="toast" id="toast" hidden></div>
+  <!-- Toasts -->
+  <div class="toasts" id="toasts"></div>
+  <div class="loader" id="loader" hidden><div class="spinner"></div></div>
 
   <script src="i18n.js"></script>
-  <script src="events.js"></script>
+  <script src="api.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
