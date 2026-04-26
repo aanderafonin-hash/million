@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#7ec8ff" />
+  <title>Рыжий пекинес: летающие приключения</title>
+  <link rel="stylesheet" href="style.css" />
+  <!-- Yandex Games SDK (relative path per official docs) -->
+  <script src="/sdk.js"></script>
+</head>
+<body>
+  <div id="app">
+    <canvas id="game"></canvas>
+
+    <!-- HUD во время игры -->
+    <div id="hud" class="hidden">
+      <div class="hud-item">Уровень <span id="hud-level">1</span></div>
+      <div class="hud-item">Очки: <span id="hud-score">0</span></div>
+      <div class="hud-item">Косточки: <span id="hud-bones">0</span></div>
+      <div class="hud-item">Рекорд: <span id="hud-best">0</span></div>
+      <button id="pause-btn" class="ui-btn ui-btn--icon" type="button" aria-label="Пауза">II</button>
+    </div>
+
+    <!-- Главное меню -->
+    <div id="menu" class="screen">
+      <div class="screen__card">
+        <h1 class="title">Рыжий пекинес<br/><span class="subtitle">летающие приключения</span></h1>
+        <p class="hint">Нажимай <b>Пробел</b>, правую кнопку мыши или тапай по экрану, чтобы пекинес летел выше. Пролетай между холодильниками, тапками и ботинками, собирай косточки — с каждой косточкой пекинес становится чуть пухлее. И берегись кошки — она крадётся за тобой и может цапнуть лапой!</p>
+        <button id="btn-start" class="ui-btn ui-btn--primary" type="button">Играть</button>
+        <button id="btn-levels" class="ui-btn" type="button">Уровни</button>
+        <button id="btn-wardrobe" class="ui-btn" type="button">Гардероб</button>
+        <button id="btn-sound" class="ui-btn" type="button">Звук: вкл</button>
+      </div>
+    </div>
+
+    <!-- Гардероб -->
+    <div id="wardrobe" class="screen hidden">
+      <div class="screen__card screen__card--wide">
+        <h2 class="title title--sm">Гардероб</h2>
+        <div class="wardrobe">
+          <canvas id="wardrobe-preview" width="260" height="260" class="wardrobe__preview"></canvas>
+          <div class="wardrobe__panel">
+            <div class="wardrobe__tabs">
+              <button class="ui-btn ui-btn--tab is-active" data-tab="hat" type="button">Шапочка</button>
+              <button class="ui-btn ui-btn--tab" data-tab="body" type="button">Одежда</button>
+              <button class="ui-btn ui-btn--tab" data-tab="boots" type="button">Ботиночки</button>
+            </div>
+            <div id="wardrobe-grid" class="wardrobe__grid"></div>
+            <div class="wardrobe__actions">
+              <button id="btn-wardrobe-clear-hat" class="ui-btn" type="button">Снять шапочку</button>
+              <button id="btn-wardrobe-clear-body" class="ui-btn" type="button">Снять одежду</button>
+              <button id="btn-wardrobe-clear-boots" class="ui-btn" type="button">Снять ботиночки</button>
+            </div>
+          </div>
+        </div>
+        <div class="wardrobe__footer">
+          <button id="btn-wardrobe-back" class="ui-btn ui-btn--primary" type="button">Готово</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Выбор уровня -->
+    <div id="levels" class="screen hidden">
+      <div class="screen__card">
+        <h2 class="title title--sm">Выбери уровень</h2>
+        <div id="level-grid" class="level-grid"></div>
+        <button id="btn-levels-back" class="ui-btn" type="button">Назад</button>
+      </div>
+    </div>
+
+    <!-- Вступление к уровню -->
+    <div id="intro" class="screen hidden">
+      <div class="screen__card">
+        <h2 class="title title--sm">Уровень <span id="intro-level">1</span></h2>
+        <p id="intro-name" class="level-name">Квартира хозяйки</p>
+        <p id="intro-desc" class="hint">Пролети между препятствиями и доберись до косточки!</p>
+        <button id="btn-intro-play" class="ui-btn ui-btn--primary" type="button">Полетели!</button>
+      </div>
+    </div>
+
+    <!-- Пауза -->
+    <div id="pause" class="screen hidden">
+      <div class="screen__card">
+        <h2 class="title title--sm">Пауза</h2>
+        <button id="btn-resume" class="ui-btn ui-btn--primary" type="button">Продолжить</button>
+        <button id="btn-restart" class="ui-btn" type="button">Заново</button>
+        <button id="btn-menu" class="ui-btn" type="button">В меню</button>
+      </div>
+    </div>
+
+    <!-- Конец уровня (успех) -->
+    <div id="win" class="screen hidden">
+      <div class="screen__card">
+        <h2 class="title title--sm">Уровень пройден!</h2>
+        <p id="win-stats" class="hint"></p>
+        <button id="btn-next" class="ui-btn ui-btn--primary" type="button">Следующий уровень</button>
+        <button id="btn-win-menu" class="ui-btn" type="button">В меню</button>
+      </div>
+    </div>
+
+    <!-- Game over -->
+    <div id="over" class="screen hidden">
+      <div class="screen__card">
+        <h2 id="over-title" class="title title--sm">Ой! Пекинес врезался</h2>
+        <p id="over-stats" class="hint"></p>
+        <button id="btn-retry" class="ui-btn ui-btn--primary" type="button">Попробовать ещё раз</button>
+        <button id="btn-over-menu" class="ui-btn" type="button">В меню</button>
+      </div>
+    </div>
+
+    <!-- Финал -->
+    <div id="final" class="screen hidden">
+      <div class="screen__card">
+        <h2 class="title">Поздравляем!</h2>
+        <p class="hint">Ты прошёл все уровни! Пекинес счастливо спит на руках у хозяйки 🦴</p>
+        <button id="btn-final-menu" class="ui-btn ui-btn--primary" type="button">В меню</button>
+      </div>
+    </div>
+
+    <!-- Область клика для прыжка (весь экран во время игры) -->
+    <div id="tap-zone" class="hidden" aria-hidden="true"></div>
+  </div>
+
+  <script src="sprites.js"></script>
+  <script src="outfits.js"></script>
+  <script src="levels.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>
