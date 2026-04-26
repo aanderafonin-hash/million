@@ -611,7 +611,18 @@
   function isBlinking(ts) { return ts < state.blinkUntil; }
 
   // ---------- Rendering ----------
+  function isMenuShown() {
+    return overlays.menu && !overlays.menu.classList.contains('hidden');
+  }
+
   function draw(ts) {
+    // On the main menu, replace the gameplay scene with the cartoon mascot
+    if (isMenuShown()) {
+      drawMenuBackground(ts);
+      drawMenuMascot(ts);
+      return;
+    }
+
     // Grass checker
     for (let y = 0; y < GRID; y++) {
       for (let x = 0; x < GRID; x++) {
@@ -633,6 +644,341 @@
 
     // Particles on top
     drawParticles();
+  }
+
+  // ---------- Main menu cartoon mascot ----------
+  function drawMenuBackground(ts) {
+    // Soft sky-to-meadow gradient
+    const W = canvas.width, H = canvas.height;
+    const sky = ctx.createLinearGradient(0, 0, 0, H);
+    sky.addColorStop(0, '#fde8b5');
+    sky.addColorStop(0.55, '#ffd789');
+    sky.addColorStop(0.56, '#9bd66a');
+    sky.addColorStop(1, '#5fa64a');
+    ctx.fillStyle = sky;
+    ctx.fillRect(0, 0, W, H);
+
+    // Distant sun
+    ctx.fillStyle = 'rgba(255, 240, 180, 0.85)';
+    ctx.beginPath();
+    ctx.ellipse(W * 0.78, H * 0.20, 60, 60, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255, 220, 130, 0.55)';
+    ctx.beginPath();
+    ctx.ellipse(W * 0.78, H * 0.20, 90, 90, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Floating bones — tiny ambient decoration
+    for (let i = 0; i < 6; i++) {
+      const bx = ((i * 137 + ts * 0.02) % (W + 80)) - 40;
+      const by = 70 + i * 28 + Math.sin(ts * 0.001 + i) * 6;
+      ctx.save();
+      ctx.translate(bx, by);
+      ctx.scale(0.45, 0.45);
+      drawBoneShape();
+      ctx.restore();
+    }
+
+    // Grass-line silhouettes near the horizon
+    ctx.fillStyle = 'rgba(60, 110, 50, 0.5)';
+    for (let i = 0; i < 14; i++) {
+      const gx = (i * 47) % W;
+      const gh = 8 + (i * 13) % 14;
+      ctx.beginPath();
+      ctx.moveTo(gx, H * 0.56);
+      ctx.lineTo(gx + 6, H * 0.56 - gh);
+      ctx.lineTo(gx + 12, H * 0.56);
+      ctx.closePath();
+      ctx.fill();
+    }
+  }
+
+  function drawBoneShape() {
+    // Stylized cartoon bone for ambient menu decor
+    ctx.fillStyle = '#fff8e1';
+    ctx.strokeStyle = '#7a5a32';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.ellipse(-22, -10, 12, 11, 0, 0, Math.PI * 2);
+    ctx.ellipse(-22, 10, 12, 11, 0, 0, Math.PI * 2);
+    ctx.ellipse(22, -10, 12, 11, 0, 0, Math.PI * 2);
+    ctx.ellipse(22, 10, 12, 11, 0, 0, Math.PI * 2);
+    ctx.fillRect(-22, -8, 44, 16);
+    ctx.fill();
+    ctx.stroke();
+  }
+
+  function drawMenuMascot(ts) {
+    const W = canvas.width, H = canvas.height;
+    // Position the puppy in the upper portion so it sits above the bottom panel.
+    const cx = W / 2;
+    const cy = H * 0.34;
+
+    // Subtle idle bob and gentle ear sway
+    const bob = Math.sin(ts * 0.0022) * 4;
+    const earSway = Math.sin(ts * 0.0018) * 0.06;
+
+    // Ground shadow under the puppy
+    ctx.save();
+    ctx.fillStyle = 'rgba(0,0,0,0.20)';
+    ctx.beginPath();
+    ctx.ellipse(cx, cy + 215, 165, 22, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    ctx.save();
+    ctx.translate(cx, cy + bob);
+
+    // ---------- Body / chest behind paws ----------
+    // The body bulges out beneath the head; in this front-on cartoon view we
+    // only see the upper torso and the two front paws.
+    ctx.fillStyle = '#1a1108';
+    ctx.strokeStyle = '#0a0604';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.ellipse(0, 200, 175, 90, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    // Tan chest patch
+    ctx.fillStyle = '#a86a2c';
+    ctx.beginPath();
+    ctx.ellipse(0, 230, 75, 38, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // ---------- Front paws ----------
+    drawMenuPaw(-78, 240);
+    drawMenuPaw(78, 240);
+
+    // ---------- Long floppy ears (drawn first so head sits over them) ----------
+    drawMenuEar(-108, -20, -0.45 + earSway, false);
+    drawMenuEar(108, -20, 0.45 - earSway, true);
+
+    // ---------- Head ----------
+    // Skull (rounded, slightly wider on top, narrower toward muzzle)
+    ctx.fillStyle = '#1a1108';
+    ctx.strokeStyle = '#0a0604';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(-110, -10);
+    ctx.bezierCurveTo(-118, -110, -50, -150, 0, -148);
+    ctx.bezierCurveTo(50, -150, 118, -110, 110, -10);
+    ctx.bezierCurveTo(108, 30, 90, 70, 60, 90);
+    ctx.bezierCurveTo(40, 110, -40, 110, -60, 90);
+    ctx.bezierCurveTo(-90, 70, -108, 30, -110, -10);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // Subtle highlight on forehead
+    const headGrad = ctx.createRadialGradient(-22, -90, 8, -10, -70, 70);
+    headGrad.addColorStop(0, 'rgba(255,255,255,0.18)');
+    headGrad.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = headGrad;
+    ctx.beginPath();
+    ctx.ellipse(-22, -82, 38, 24, -0.3, 0, Math.PI * 2);
+    ctx.fill();
+
+    // ---------- Tan eyebrow dots (classic black-and-tan markings) ----------
+    ctx.fillStyle = '#a86a2c';
+    ctx.beginPath();
+    ctx.ellipse(-32, -52, 11, 7, -0.2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(32, -52, 11, 7, 0.2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // ---------- Big shiny puppy eyes ----------
+    drawPuppyEye(-42, -22, ts);
+    drawPuppyEye(42, -22, ts);
+
+    // ---------- Muzzle / snout ----------
+    // Tan around the snout (cheeks merging into muzzle)
+    ctx.fillStyle = '#a86a2c';
+    ctx.beginPath();
+    ctx.ellipse(0, 50, 78, 56, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Black upper muzzle ridge
+    ctx.fillStyle = '#1a1108';
+    ctx.beginPath();
+    ctx.moveTo(-58, 28);
+    ctx.bezierCurveTo(-44, 6, 44, 6, 58, 28);
+    ctx.bezierCurveTo(50, 50, -50, 50, -58, 28);
+    ctx.closePath();
+    ctx.fill();
+
+    // Nose
+    ctx.fillStyle = '#0a0604';
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.ellipse(0, 24, 22, 17, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    // Nose highlight
+    ctx.fillStyle = 'rgba(255,255,255,0.55)';
+    ctx.beginPath();
+    ctx.ellipse(-7, 17, 6, 4, -0.3, 0, Math.PI * 2);
+    ctx.fill();
+    // Nostrils
+    ctx.fillStyle = '#000';
+    ctx.beginPath();
+    ctx.ellipse(-7, 30, 2.5, 4, 0, 0, Math.PI * 2);
+    ctx.ellipse(7, 30, 2.5, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Mouth — gentle curved smile under the nose
+    ctx.strokeStyle = '#1a1108';
+    ctx.lineWidth = 3;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(0, 46);
+    ctx.lineTo(0, 58);
+    ctx.moveTo(0, 58);
+    ctx.quadraticCurveTo(-12, 70, -22, 64);
+    ctx.moveTo(0, 58);
+    ctx.quadraticCurveTo(12, 70, 22, 64);
+    ctx.stroke();
+
+    // Whiskers — light cream so they pop against the dark muzzle
+    ctx.strokeStyle = 'rgba(255, 240, 210, 0.75)';
+    ctx.lineWidth = 1.6;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(-26, 36); ctx.quadraticCurveTo(-55, 30, -82, 22);
+    ctx.moveTo(-26, 44); ctx.quadraticCurveTo(-58, 46, -86, 48);
+    ctx.moveTo(-26, 52); ctx.quadraticCurveTo(-58, 60, -82, 70);
+    ctx.moveTo(26, 36);  ctx.quadraticCurveTo(55, 30, 82, 22);
+    ctx.moveTo(26, 44);  ctx.quadraticCurveTo(58, 46, 86, 48);
+    ctx.moveTo(26, 52);  ctx.quadraticCurveTo(58, 60, 82, 70);
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
+  function drawMenuEar(rootX, rootY, baseAngle, mirror) {
+    ctx.save();
+    ctx.translate(rootX, rootY);
+    ctx.rotate(baseAngle);
+    if (mirror) ctx.scale(-1, 1);
+
+    // Outer ear — very long teardrop hanging well below the head
+    ctx.fillStyle = '#100a06';
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(0, -10);
+    ctx.bezierCurveTo(-30, 40, -56, 150, -42, 220);
+    ctx.bezierCurveTo(-18, 252, 38, 250, 52, 220);
+    ctx.bezierCurveTo(56, 140, 36, 40, 14, -10);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // Inner-ear warm tan tint near the base
+    ctx.fillStyle = 'rgba(168,106,44,0.55)';
+    ctx.beginPath();
+    ctx.ellipse(2, 36, 16, 32, -0.1, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Subtle gloss on the front of the ear
+    const gloss = ctx.createLinearGradient(-10, 0, 40, 220);
+    gloss.addColorStop(0, 'rgba(255,255,255,0.22)');
+    gloss.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = gloss;
+    ctx.beginPath();
+    ctx.moveTo(0, -10);
+    ctx.bezierCurveTo(-30, 40, -56, 150, -42, 220);
+    ctx.bezierCurveTo(-18, 252, 38, 250, 52, 220);
+    ctx.bezierCurveTo(56, 140, 36, 40, 14, -10);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.restore();
+  }
+
+  function drawMenuPaw(x, y) {
+    ctx.save();
+    ctx.translate(x, y);
+    // Black upper paw
+    ctx.fillStyle = '#1a1108';
+    ctx.strokeStyle = '#0a0604';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.ellipse(0, -8, 36, 32, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    // Tan toes
+    ctx.fillStyle = '#a86a2c';
+    for (const dx of [-18, 0, 18]) {
+      ctx.beginPath();
+      ctx.ellipse(dx, 12, 9, 11, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // Claws
+    ctx.fillStyle = '#1a1108';
+    for (const dx of [-22, -3, 16]) {
+      ctx.beginPath();
+      ctx.ellipse(dx + 3, 22, 3, 5, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  function drawPuppyEye(ex, ey, ts) {
+    const blinking = isBlinking(ts);
+    ctx.save();
+    ctx.translate(ex, ey);
+
+    if (blinking) {
+      ctx.strokeStyle = '#1a1108';
+      ctx.lineWidth = 3;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(-26, 0);
+      ctx.quadraticCurveTo(0, 16, 26, 0);
+      ctx.stroke();
+      ctx.restore();
+      return;
+    }
+
+    // Big shiny eyeball — almost circular, slightly oval
+    ctx.fillStyle = '#fff';
+    ctx.strokeStyle = '#1a1108';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 28, 30, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    // Iris — warm dark brown / amber
+    const iris = ctx.createRadialGradient(-4, -6, 4, 0, 0, 26);
+    iris.addColorStop(0, '#7a4a1e');
+    iris.addColorStop(0.55, '#3a1f0a');
+    iris.addColorStop(1, '#0c0604');
+    ctx.fillStyle = iris;
+    ctx.beginPath();
+    ctx.ellipse(0, 2, 22, 24, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Pupil
+    ctx.fillStyle = '#000';
+    ctx.beginPath();
+    ctx.ellipse(0, 4, 12, 14, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Big highlight (top-left)
+    ctx.fillStyle = 'rgba(255,255,255,0.95)';
+    ctx.beginPath();
+    ctx.ellipse(-7, -8, 8, 10, -0.3, 0, Math.PI * 2);
+    ctx.fill();
+    // Smaller highlight (bottom-right)
+    ctx.beginPath();
+    ctx.ellipse(8, 9, 3.5, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
   }
 
   const INTERIOR_TYPES = ['toilet', 'sofa', 'table', 'armchair', 'slipper', 'boot', 'stool', 'nightstand', 'lamp', 'rug', 'bookshelf', 'tv'];
@@ -1097,15 +1443,15 @@
     ctx.stroke();
     ctx.restore();
 
-    // Body layers (concentric strokes = realistic dachshund cross-section):
-    // 1. Dark outline
-    strokeBody(pts, CELL * 0.72, '#2a1608');
-    // 2. Tan belly/flank
-    strokeBody(pts, CELL * 0.64, '#c8944c');
-    // 3. Dark chepprak saddle down the middle (top of body)
-    strokeBody(pts, CELL * 0.42, '#3a1f0a');
-    // 4. Subtle highlight
-    strokeBody(pts, CELL * 0.14, 'rgba(255, 220, 180, 0.22)');
+    // Body layers (concentric strokes — chocolate-and-tan smooth-haired dachshund):
+    // 1. Dark chocolate outline
+    strokeBody(pts, CELL * 0.74, '#2a180c');
+    // 2. Mid chocolate body (uniform — no saddle for chocolate-and-tan)
+    strokeBody(pts, CELL * 0.66, '#5a3520');
+    // 3. Warm chocolate top
+    strokeBody(pts, CELL * 0.46, '#704026');
+    // 4. Subtle highlight along the spine
+    strokeBody(pts, CELL * 0.14, 'rgba(220, 170, 120, 0.22)');
 
     // Paws along the body
     drawPaws(body, ts);

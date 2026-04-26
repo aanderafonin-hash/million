@@ -95,6 +95,20 @@ html, body {
   padding: 20px;
 }
 
+/* Menu overlay: keep the cartoon mascot fully visible behind the panel */
+#overlay-menu {
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  align-items: flex-end;
+  padding-bottom: 24px;
+}
+
+#overlay-menu .panel {
+  background: rgba(255, 248, 231, 0.94);
+  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.35);
+}
+
 .panel {
   background: #fff8e7;
   border: 4px solid #4a7c2a;
