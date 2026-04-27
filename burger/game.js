@@ -5,12 +5,16 @@
 
 // ─── Audio Context ───
 let audioCtx = null;
+let soundMuted = false;
+let gamePaused = false;
+
 function getAudioCtx() {
     if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     return audioCtx;
 }
 
 function playTone(freq, dur, type = 'sine', vol = 0.15) {
+    if (soundMuted) return;
     try {
         const c = getAudioCtx(), o = c.createOscillator(), g = c.createGain();
         o.type = type; o.frequency.value = freq;
@@ -84,9 +88,11 @@ const MILESTONE_PRAISES = [
 function speakPraise() {
     try {
         const p = PRAISES[Math.floor(Math.random() * PRAISES.length)];
-        const u = new SpeechSynthesisUtterance(p.text);
-        u.lang = p.lang; u.rate = 1.3; u.pitch = 1.4; u.volume = 1.0;
-        speechSynthesis.cancel(); speechSynthesis.speak(u);
+        if (!soundMuted) {
+            const u = new SpeechSynthesisUtterance(p.text);
+            u.lang = p.lang; u.rate = 1.3; u.pitch = 1.4; u.volume = 1.0;
+            speechSynthesis.cancel(); speechSynthesis.speak(u);
+        }
         return p.text;
     } catch (e) { return PRAISES[Math.floor(Math.random() * PRAISES.length)].text; }
 }
@@ -899,8 +905,11 @@ function startGame() {
     isNewRecord = false; isGolden = false;
     floatingTexts = []; juiceDrops = []; shakeIntensity = 0;
     bgPulse = 0; frameCount = 0;
+    gamePaused = false; pauseOverlay.classList.remove('active');
     showScreen('game');
     resize();
+    // GameplayAPI start (1.19.3)
+    if (ysdk) try { ysdk.features.GameplayAPI.start(); } catch(e) {}
     stack.push({ ingredient: BOTTOM_BUN, height: BOTTOM_BUN.height, offX: 0 });
     spawnIng(); updateHUD();
 }
@@ -1041,6 +1050,8 @@ function startCollapse() {
 
 function showResult() {
     if (resultShown) return; resultShown = true; gameState = 'gameover';
+    // GameplayAPI stop (1.19.3)
+    if (ysdk) try { ysdk.features.GameplayAPI.stop(); } catch(e) {}
     // Save personal best
     if (score > personalBest) {
         personalBest = score;
@@ -1301,13 +1312,74 @@ function draw() {
     ctx.restore();
 }
 
-function loop() { update(); draw(); requestAnimationFrame(loop); }
+function loop() {
+    if (!gamePaused) { update(); draw(); }
+    requestAnimationFrame(loop);
+}
 
 // ─── Input ───
-function handleDrop() { if (gameState === 'playing' && curIng) dropIng(); }
-canvas.addEventListener('click', e => { e.preventDefault(); handleDrop(); });
-canvas.addEventListener('touchstart', e => { e.preventDefault(); handleDrop(); }, { passive: false });
-document.addEventListener('keydown', e => { if (e.code === 'Space' || e.key === ' ') { e.preventDefault(); handleDrop(); } });
+function handleDrop() { if (gameState === 'playing' && curIng && !gamePaused) dropIng(); }
+canvas.addEventListener('click', e => { if (e.target !== canvas) return; e.preventDefault(); handleDrop(); });
+canvas.addEventListener('touchstart', e => { if (e.target !== canvas) return; e.preventDefault(); handleDrop(); }, { passive: false });
+document.addEventListener('keydown', e => {
+    if (e.code === 'Space' || e.key === ' ') { e.preventDefault(); handleDrop(); }
+    if (e.code === 'Escape' || e.key === 'Escape') { e.preventDefault(); togglePause(); }
+});
+
+// ─── Prevent context menu & long-tap (1.6.1.8 / 1.6.2.7) ───
+document.addEventListener('contextmenu', e => e.preventDefault());
+document.addEventListener('selectstart', e => { if (e.target.tagName !== 'INPUT') e.preventDefault(); });
+// Prevent pull-to-refresh / swipe navigation (1.10.2)
+document.addEventListener('touchmove', e => {
+    if (!e.target.closest('.leaderboard')) e.preventDefault();
+}, { passive: false });
+
+// ─── Mute toggle (6.2) ───
+const btnMute = document.getElementById('btn-mute');
+btnMute.addEventListener('click', e => {
+    e.stopPropagation();
+    soundMuted = !soundMuted;
+    btnMute.textContent = soundMuted ? '🔇' : '🔊';
+    if (soundMuted) { speechSynthesis.cancel(); if (audioCtx) audioCtx.suspend(); }
+    else { if (audioCtx) audioCtx.resume(); }
+});
+
+// ─── Pause toggle (6.3) ───
+const pauseOverlay = document.getElementById('pause-overlay');
+function togglePause() {
+    if (gameState !== 'playing' && gameState !== 'dropping' && gameState !== 'dog' && !gamePaused) return;
+    gamePaused = !gamePaused;
+    pauseOverlay.classList.toggle('active', gamePaused);
+    if (gamePaused) {
+        speechSynthesis.cancel();
+        if (audioCtx) audioCtx.suspend();
+        if (ysdk) try { ysdk.features.GameplayAPI.stop(); } catch(e) {}
+    } else {
+        if (!soundMuted && audioCtx) audioCtx.resume();
+        if (ysdk) try { ysdk.features.GameplayAPI.start(); } catch(e) {}
+    }
+}
+document.getElementById('btn-pause').addEventListener('click', e => { e.stopPropagation(); togglePause(); });
+document.getElementById('btn-resume').addEventListener('click', e => { e.stopPropagation(); togglePause(); });
+document.getElementById('btn-pause-menu').addEventListener('click', e => {
+    e.stopPropagation();
+    gamePaused = false; pauseOverlay.classList.remove('active');
+    if (ysdk) try { ysdk.features.GameplayAPI.stop(); } catch(e) {}
+    showScreen('start');
+});
+
+// ─── Visibility change — pause sound & game on minimize (1.3) ───
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+        speechSynthesis.cancel();
+        if (audioCtx) audioCtx.suspend();
+        if ((gameState === 'playing' || gameState === 'dropping' || gameState === 'dog') && !gamePaused) {
+            togglePause();
+        }
+    } else {
+        if (!soundMuted && audioCtx) audioCtx.resume();
+    }
+});
 
 // ─── UI ───
 document.getElementById('btn-play').addEventListener('click', () => {
@@ -1325,7 +1397,15 @@ document.getElementById('btn-result-menu').addEventListener('click', () => showS
 let ysdk = null;
 function initSDK() {
     if (typeof YaGames === 'undefined') return;
-    YaGames.init().then(sdk => { ysdk = sdk; sdk.features.LoadingAPI.ready(); }).catch(() => {});
+    YaGames.init().then(sdk => {
+        ysdk = sdk;
+        sdk.features.LoadingAPI.ready();
+        // Auto language detection (2.14)
+        try {
+            const lang = sdk.environment.i18n.lang;
+            document.documentElement.lang = lang === 'ru' ? 'ru' : lang;
+        } catch(e) {}
+    }).catch(() => {});
 }
 
 // ─── Init ───
