@@ -54,19 +54,20 @@ function playComboTick(c) {
 
 // ─── Speech Praise ───
 const PRAISES = [
-    { text: 'Отлично!', lang: 'ru-RU' }, { text: 'Великолепно!', lang: 'ru-RU' },
-    { text: 'Супер!', lang: 'ru-RU' }, { text: 'Идеально!', lang: 'ru-RU' },
-    { text: 'Потрясающе!', lang: 'ru-RU' }, { text: 'Браво!', lang: 'ru-RU' },
-    { text: 'Шедевр!', lang: 'ru-RU' }, { text: 'Вкуснотища!', lang: 'ru-RU' },
-    { text: '대박!', lang: 'ko-KR' }, { text: '완벽해!', lang: 'ko-KR' }, { text: '최고!', lang: 'ko-KR' },
-    { text: '太棒了!', lang: 'zh-CN' }, { text: '完美!', lang: 'zh-CN' }, { text: '厉害!', lang: 'zh-CN' },
-    { text: 'ممتاز', lang: 'ar-SA' }, { text: 'رائع', lang: 'ar-SA' }, { text: 'عظيم', lang: 'ar-SA' },
-    { text: 'Perfect!', lang: 'en-US' }, { text: 'Amazing!', lang: 'en-US' }, { text: 'Awesome!', lang: 'en-US' },
-    { text: 'すごい!', lang: 'ja-JP' }, { text: '完璧!', lang: 'ja-JP' },
-    { text: '¡Perfecto!', lang: 'es-ES' }, { text: 'Parfait!', lang: 'fr-FR' },
-    { text: 'Perfetto!', lang: 'it-IT' }, { text: 'Wunderbar!', lang: 'de-DE' },
-    { text: 'Perfeito!', lang: 'pt-BR' }, { text: 'Mükemmel!', lang: 'tr-TR' },
-    { text: 'Tuyệt vời!', lang: 'vi-VN' },
+    { text: 'Класс!!', lang: 'ru-RU' }, { text: 'Ты супер!!', lang: 'ru-RU' },
+    { text: 'Обалденно!!', lang: 'ru-RU' }, { text: 'Ты шеф-повар!!', lang: 'ru-RU' },
+    { text: 'Я восхищаюсь тобой!!', lang: 'ru-RU' }, { text: 'Невероятно!!', lang: 'ru-RU' },
+    { text: 'Ты гений кухни!!', lang: 'ru-RU' }, { text: 'Вот это да!!', lang: 'ru-RU' },
+    { text: 'Потрясающе!!', lang: 'ru-RU' }, { text: 'Великолепно!!', lang: 'ru-RU' },
+    { text: 'Шедевр!!', lang: 'ru-RU' }, { text: 'Бомба!!', lang: 'ru-RU' },
+    { text: 'Красавчик!!', lang: 'ru-RU' }, { text: 'Мастер!!', lang: 'ru-RU' },
+    { text: 'Вкуснотища!!', lang: 'ru-RU' }, { text: 'Идеально!!', lang: 'ru-RU' },
+    { text: '대박!!', lang: 'ko-KR' }, { text: '완벽해!!', lang: 'ko-KR' }, { text: '최고!!', lang: 'ko-KR' },
+    { text: '太棒了!!', lang: 'zh-CN' }, { text: '完美!!', lang: 'zh-CN' }, { text: '厉害!!', lang: 'zh-CN' },
+    { text: 'Amazing!!', lang: 'en-US' }, { text: 'Awesome!!', lang: 'en-US' }, { text: 'Incredible!!', lang: 'en-US' },
+    { text: 'すごい!!', lang: 'ja-JP' }, { text: '完璧!!', lang: 'ja-JP' },
+    { text: '¡Increíble!!', lang: 'es-ES' }, { text: 'Magnifique!!', lang: 'fr-FR' },
+    { text: 'Fantastico!!', lang: 'it-IT' }, { text: 'Wahnsinn!!', lang: 'de-DE' },
 ];
 
 const FEVER_PRAISES = [
@@ -84,7 +85,7 @@ function speakPraise() {
     try {
         const p = PRAISES[Math.floor(Math.random() * PRAISES.length)];
         const u = new SpeechSynthesisUtterance(p.text);
-        u.lang = p.lang; u.rate = 1.1; u.volume = 0.8;
+        u.lang = p.lang; u.rate = 1.3; u.pitch = 1.4; u.volume = 1.0;
         speechSynthesis.cancel(); speechSynthesis.speak(u);
         return p.text;
     } catch (e) { return PRAISES[Math.floor(Math.random() * PRAISES.length)].text; }
@@ -113,8 +114,8 @@ const OK_TH = 35;
 const MISS_TH = 70;
 const GRAVITY = 0.6;
 const MAX_LEAN = 100;
-const DOG_INTERVAL = 8;
-const DOG_EAT_LAYERS = 3;
+const DOG_INTERVAL = 15;
+const DOG_EAT_LAYERS = 5;
 const SWAY_FRICTION = 0.96;
 const BASE_PTS = 100;
 const COMBO_MUL = 25;
@@ -137,8 +138,8 @@ let swayAngle = 0, swayVel = 0, cameraY = 0, targetCamY = 0, plateBaseY = 0;
 let stack = [], curIng = null, fallIng = null, colPieces = [], particles = [];
 let moveSpd = SPD_BASE, moveDir = 1, resultShown = false;
 // Dog state
-let dogActive = false, dogY = 0, dogTargetY = 0, dogPhase = 'hidden';
-let dogEatTimer = 0, dropsSinceDog = 0, dogMouthOpen = 0;
+let dogActive = false, dogX = 0, dogY = 0, dogTargetY = 0, dogPhase = 'hidden';
+let dogEatTimer = 0, dropsSinceDog = 0, dogMouthOpen = 0, dogDir = 1;
 // Fever & addiction
 let fever = false, feverTimer = 0, feverGlow = 0;
 let personalBest = parseInt(localStorage.getItem('burger_pb') || '0');
@@ -810,7 +811,7 @@ const DRAW_FNS = {
 
 // ─── Plate ───
 function drawPlate(cx, y) {
-    const pw = ING_W + 50;
+    const pw = ING_W + 80;
     ctx.fillStyle = 'rgba(0,0,0,0.35)';
     ctx.beginPath(); ctx.ellipse(cx, y + 14, pw / 2 + 3, 12, 0, 0, Math.PI * 2); ctx.fill();
     let pg = ctx.createLinearGradient(cx - pw / 2, y, cx + pw / 2, y);
@@ -893,7 +894,7 @@ function startGame() {
     perfectCount = 0; cumulativeLean = 0; swayAngle = 0; swayVel = 0;
     cameraY = 0; targetCamY = 0; stack = []; particles = []; colPieces = [];
     moveSpd = SPD_BASE; resultShown = false;
-    dogActive = false; dogPhase = 'hidden'; dropsSinceDog = 0;
+    dogActive = false; dogPhase = 'hidden'; dropsSinceDog = 0; dogX = 0; dogDir = 1;
     fever = false; feverTimer = 0; feverGlow = 0;
     isNewRecord = false; isGolden = false;
     floatingTexts = []; juiceDrops = []; shakeIntensity = 0;
@@ -1009,7 +1010,8 @@ function landIng() {
         }
     }
 
-    targetCamY = Math.min(0, lp.y - H * 0.75);
+    // Camera stays fixed — no vertical scrolling
+    targetCamY = 0;
     moveSpd = Math.min(SPD_MAX, SPD_BASE + level * SPD_INC);
     fallIng = null; updateHUD();
 
@@ -1082,10 +1084,10 @@ function playMunchSound() {
 }
 
 function summonDog() {
-    dogActive = true; dogPhase = 'rising';
-    dogY = H + 100;
-    const ps = stackPos();
-    dogTargetY = plateBaseY - cameraY;
+    dogActive = true; dogPhase = 'entering';
+    dogDir = Math.random() > 0.5 ? 1 : -1;
+    dogX = dogDir > 0 ? -120 : W + 120;
+    dogY = plateBaseY + 10;
     dogMouthOpen = 0;
     dogEatTimer = 0;
     gameState = 'dog';
@@ -1106,11 +1108,11 @@ function dogEatLayers() {
     dropsSinceDog = 0;
 }
 
-function drawDog(screenY) {
-    const cx = W / 2, w = 100, h = 80;
-    const y = screenY;
+function drawDog(dx, dy) {
     ctx.save();
-    ctx.translate(cx, y);
+    ctx.translate(dx, dy);
+    // Flip horizontally based on direction
+    ctx.scale(dogDir, 1);
 
     // Body
     ctx.fillStyle = '#8B6914';
@@ -1167,26 +1169,24 @@ function drawDog(screenY) {
 
 function updateDog() {
     if (!dogActive) return;
-    if (dogPhase === 'rising') {
-        dogY -= 4;
-        const target = plateBaseY - cameraY + 10;
-        if (dogY <= target) {
-            dogY = target; dogPhase = 'eating'; dogEatTimer = 0;
+    const targetX = W / 2;
+    if (dogPhase === 'entering') {
+        // Move horizontally toward center (slower speed = 2)
+        dogX += dogDir * 2;
+        if ((dogDir > 0 && dogX >= targetX) || (dogDir < 0 && dogX <= targetX)) {
+            dogX = targetX; dogPhase = 'eating'; dogEatTimer = 0;
         }
     } else if (dogPhase === 'eating') {
         dogEatTimer++;
-        dogMouthOpen = Math.min(1, dogEatTimer / 15);
-        if (dogEatTimer === 25) dogEatLayers();
-        if (dogEatTimer > 50) { dogPhase = 'leaving'; dogMouthOpen = 0; }
+        dogMouthOpen = Math.min(1, dogEatTimer / 20);
+        if (dogEatTimer === 35) dogEatLayers();
+        if (dogEatTimer > 70) { dogPhase = 'leaving'; dogMouthOpen = 0; }
     } else if (dogPhase === 'leaving') {
-        dogY += 5;
-        if (dogY > H + 100) {
+        // Exit horizontally in the opposite direction
+        dogX -= dogDir * 2;
+        if (dogX < -120 || dogX > W + 120) {
             dogActive = false; dogPhase = 'hidden';
-            const ps = stackPos();
-            if (ps.length > 0) {
-                const lp = ps[ps.length - 1];
-                targetCamY = Math.min(0, lp.y - H * 0.75);
-            }
+            targetCamY = 0;
             gameState = 'playing'; spawnIng();
         }
     }
@@ -1287,7 +1287,7 @@ function draw() {
         drawInstMeter();
         drawComboMeter();
     }
-    if (dogActive) drawDog(dogY);
+    if (dogActive) drawDog(dogX, dogY);
     drawJuiceDrops();
     drawParticles();
     drawFloatingTexts();
