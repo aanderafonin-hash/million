@@ -22,13 +22,31 @@ from ..services.odds import normalize_probabilities, prob_to_odds
 
 logger = logging.getLogger(__name__)
 
-# A small curated list of leagues (sports + league id pairs)
+# Curated list of leagues (sport + thesportsdb league id + label).
+# Cap is 8 events per league (see fetch_upcoming below).
 LEAGUES = [
+    # Soccer
     ("Soccer", 4328, "⚽ EPL"),  # English Premier League
+    ("Soccer", 4329, "⚽ Championship"),  # English Championship
+    ("Soccer", 4331, "⚽ Bundesliga"),  # German Bundesliga
+    ("Soccer", 4332, "⚽ MLS"),  # Major League Soccer
+    ("Soccer", 4334, "⚽ Ligue 1"),  # French Ligue 1
     ("Soccer", 4335, "⚽ La Liga"),  # Spanish La Liga
+    ("Soccer", 4480, "⚽ Champions League"),  # UEFA Champions League
+    ("Soccer", 4481, "⚽ Europa League"),  # UEFA Europa League
+    ("Soccer", 4337, "⚽ Eredivisie"),  # Dutch Eredivisie
+    ("Soccer", 4346, "⚽ Serie A"),  # Italian Serie A
+    # Basketball
     ("Basketball", 4387, "🏀 NBA"),
+    ("Basketball", 4607, "🏀 EuroLeague"),
+    # Ice Hockey
     ("Ice Hockey", 4380, "🏒 NHL"),
-    ("Soccer", 4332, "⚽ MLS"),
+    # Baseball
+    ("Baseball", 4424, "⚾ MLB"),
+    # American Football
+    ("American Football", 4391, "🏈 NFL"),
+    # MMA
+    ("Fighting", 4443, "🥊 UFC"),
 ]
 
 
@@ -92,6 +110,10 @@ def _emoji_for(sport: str) -> str:
         "soccer": "⚽",
         "basketball": "🏀",
         "ice hockey": "🏒",
+        "baseball": "⚾",
+        "american football": "🏈",
+        "fighting": "🥊",
+        "tennis": "🎾",
     }.get(sport.lower(), "🏆")
 
 

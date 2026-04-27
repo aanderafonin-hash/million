@@ -1,15 +1,18 @@
 import asyncio
 import json
 import secrets
-from typing import Dict, List, Set
+from datetime import datetime
+from typing import Dict, List, Optional, Set, Tuple
 
 from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
 from sqlmodel import Session, select
 
 from ..auth import decode_token, get_current_user
+from ..config import settings
 from ..db import get_session, session_scope
 from ..models import ChatMessage, Event, User
 from ..schemas import ChatMessageIn, ChatMessageOut
+from ..services.profanity import censor
 from ..services.viewers import join, leave
 
 router = APIRouter(prefix="/api/chat", tags=["chat"])
@@ -39,9 +42,44 @@ def _msg_to_out(session: Session, msg: ChatMessage) -> ChatMessageOut:
         user_id=msg.user_id,
         username=user.username if user else "?",
         avatar=user.avatar if user else "🦊",
+        avatar_url=user.avatar_url if user else None,
         text=msg.text,
+        is_deleted=bool(msg.is_deleted),
         created_at=msg.created_at,
     )
+
+
+def _check_can_post(user: User) -> Tuple[bool, str]:
+    """Return (allowed, reason). reason is i18n-key-like for client display."""
+    if user.is_banned:
+        return False, "banned"
+    now = datetime.utcnow()
+    if user.chat_muted_until and user.chat_muted_until > now:
+        return False, "muted"
+    if user.last_chat_at:
+        delta = (now - user.last_chat_at).total_seconds()
+        if delta < settings.chat_min_interval_sec:
+            return False, "rate_limited"
+    return True, ""
+
+
+def _save_chat_message(
+    session: Session, user: User, event_id: int, text: str
+) -> Tuple[Optional[ChatMessage], str]:
+    event = session.exec(select(Event).where(Event.id == event_id)).first()
+    if not event:
+        return None, "no_event"
+    ok, reason = _check_can_post(user)
+    if not ok:
+        return None, reason
+    cleaned = censor(text.strip())
+    msg = ChatMessage(event_id=event_id, user_id=user.id, text=cleaned)
+    session.add(msg)
+    user.last_chat_at = datetime.utcnow()
+    session.add(user)
+    session.commit()
+    session.refresh(msg)
+    return msg, ""
 
 
 @router.get("/{event_id}", response_model=List[ChatMessageOut])
@@ -65,13 +103,17 @@ async def post_message(
     session: Session = Depends(get_session),
     user: User = Depends(get_current_user),
 ) -> ChatMessageOut:
-    event = session.exec(select(Event).where(Event.id == event_id)).first()
-    if not event:
-        raise HTTPException(status_code=404, detail="event not found")
-    msg = ChatMessage(event_id=event_id, user_id=user.id, text=payload.text.strip())
-    session.add(msg)
-    session.commit()
-    session.refresh(msg)
+    msg, reason = _save_chat_message(session, user, event_id, payload.text)
+    if not msg:
+        if reason == "no_event":
+            raise HTTPException(status_code=404, detail="event not found")
+        if reason == "muted":
+            raise HTTPException(status_code=403, detail="muted")
+        if reason == "rate_limited":
+            raise HTTPException(status_code=429, detail="too fast")
+        if reason == "banned":
+            raise HTTPException(status_code=403, detail="banned")
+        raise HTTPException(status_code=400, detail=reason or "bad")
     out = _msg_to_out(session, msg)
     await _broadcast(event_id, {"type": "chat", "message": out.model_dump(mode="json")})
     return out
@@ -109,20 +151,24 @@ async def chat_ws(websocket: WebSocket, event_id: int) -> None:
             if data.get("type") != "chat":
                 continue
             if not user_id:
-                await websocket.send_text(json.dumps({"type": "error", "error": "auth required"}))
+                await websocket.send_text(json.dumps({"type": "error", "error": "auth_required"}))
                 continue
             text = (data.get("text") or "").strip()
             if not text or len(text) > 500:
                 continue
             with session_scope() as s:
                 user = s.exec(select(User).where(User.id == user_id)).first()
-                event = s.exec(select(Event).where(Event.id == event_id)).first()
-                if not user or not event:
+                if not user:
                     continue
-                msg = ChatMessage(event_id=event_id, user_id=user.id, text=text)
-                s.add(msg)
-                s.commit()
-                s.refresh(msg)
+                msg, reason = _save_chat_message(s, user, event_id, text)
+                if not msg:
+                    try:
+                        await websocket.send_text(
+                            json.dumps({"type": "error", "error": reason})
+                        )
+                    except Exception:
+                        pass
+                    continue
                 out = _msg_to_out(s, msg)
             await _broadcast(event_id, {"type": "chat", "message": out.model_dump(mode="json")})
     except WebSocketDisconnect:

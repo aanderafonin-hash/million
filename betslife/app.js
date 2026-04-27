@@ -64,12 +64,15 @@
   function setAuthMode(mode) {
     $$('.auth-tab').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
     $('#auth-avatar-row').hidden = mode !== 'register';
+    $('#auth-email-field').hidden = mode !== 'register';
+    $('#auth-captcha-field').hidden = mode !== 'register';
     $('#auth-recovery-field').hidden = mode !== 'recover';
     $('#auth-newpw-field').hidden = mode !== 'recover';
     const titles = { login: 'login', register: 'register', recover: 'recover' };
     const submitLabels = { login: 'login', register: 'register', recover: 'reset_password' };
     $('#auth-title').textContent = T(titles[mode]);
     $('#auth-submit').textContent = T(submitLabels[mode]);
+    if (mode === 'register') refreshCaptcha();
   }
   function buildEmojiGrid(grid, onPick, currentValue) {
     grid.innerHTML = '';
@@ -89,6 +92,33 @@
   }
 
   let pickedAvatar = '🦊';
+  let captchaToken = null;
+  let pickedAvatarFile = null;  // File object selected for upload (register or profile)
+
+  async function refreshCaptcha() {
+    try {
+      const c = await API.captcha();
+      captchaToken = c.token;
+      $('#auth-captcha-question').textContent = c.question + ' = ?';
+      $('#auth-captcha-answer').value = '';
+    } catch (e) { /* network */ }
+  }
+
+  function updateAuthAvatarPreview() {
+    const prev = $('#auth-avatar-preview');
+    if (!prev) return;
+    if (pickedAvatarFile) {
+      prev.innerHTML = '';
+      const url = URL.createObjectURL(pickedAvatarFile);
+      prev.style.backgroundImage = `url(${url})`;
+      prev.style.backgroundSize = 'cover';
+      prev.style.backgroundPosition = 'center';
+      prev.textContent = '';
+    } else {
+      prev.style.backgroundImage = '';
+      prev.textContent = pickedAvatar;
+    }
+  }
 
   async function authSubmit() {
     const mode = $$('.auth-tab').find(b => b.classList.contains('active')).dataset.mode;
@@ -127,12 +157,36 @@
       showLoader(true);
       let res;
       if (mode === 'register') {
-        res = await API.register({ username, password, avatar: pickedAvatar });
+        const email = $('#auth-email').value.trim();
+        const captchaAnswer = $('#auth-captcha-answer').value.trim();
+        if (!captchaToken || !captchaAnswer) { showAuthError(T('auth_captcha_required')); showLoader(false); return; }
+        try {
+          res = await API.register({
+            username, password,
+            avatar: pickedAvatar,
+            email: email || null,
+            captcha_token: captchaToken,
+            captcha_answer: captchaAnswer,
+          });
+        } catch (e) {
+          // refresh captcha after any failure
+          await refreshCaptcha();
+          throw e;
+        }
+        API.setToken(res.access_token);
+        state.user = res.user;
+        // upload avatar photo if user picked one
+        if (pickedAvatarFile) {
+          try {
+            state.user = await API.uploadAvatar(pickedAvatarFile);
+          } catch (e) { /* keep emoji */ }
+          pickedAvatarFile = null;
+        }
       } else {
         res = await API.login({ username, password });
+        API.setToken(res.access_token);
+        state.user = res.user;
       }
-      API.setToken(res.access_token);
-      state.user = res.user;
       closeAuth();
       toast(T(mode === 'register' ? 'registered' : 'logged_in', { name: state.user.username }), 'ok');
       if (mode === 'register' && res.user.recovery_code) {
@@ -152,7 +206,12 @@
   function prettyErr(e) {
     if (e.network) return T('err_network');
     if (e.status === 401) return T('err_401');
+    if (e.status === 403 && e.data && e.data.detail === 'muted') return T('err_muted');
+    if (e.status === 403 && e.data && e.data.detail === 'banned') return T('err_banned');
     if (e.status === 409) return T('err_taken');
+    if (e.status === 413) return T('file_too_large');
+    if (e.status === 429) return T('err_rate_limited');
+    if (e && e.message === 'captcha failed') return T('err_captcha');
     return (e && e.message) || T('err_generic');
   }
   function showRecoveryCode(code) {
@@ -171,17 +230,44 @@
   }
 
   // ----- profile
+  function renderProfileAvatar() {
+    const el = $('#profile-avatar');
+    const prev = $('#profile-avatar-preview');
+    const u = state.user;
+    if (!u) return;
+    if (u.avatar_url) {
+      const url = API.mediaUrl(u.avatar_url);
+      el.innerHTML = '';
+      el.style.backgroundImage = `url(${url})`;
+      el.style.backgroundSize = 'cover';
+      el.style.backgroundPosition = 'center';
+      el.textContent = '';
+      if (prev) {
+        prev.innerHTML = `<img src="${url}" alt=""/>`;
+        $('#profile-avatar-remove').hidden = false;
+      }
+    } else {
+      el.style.backgroundImage = '';
+      el.textContent = u.avatar || '🦊';
+      if (prev) {
+        prev.innerHTML = '';
+        prev.textContent = u.avatar || '🦊';
+        $('#profile-avatar-remove').hidden = true;
+      }
+    }
+  }
   function openProfile() {
     if (!state.user) { openAuth('login'); return; }
     $('#profile-backdrop').hidden = false;
     $('#profile-username').textContent = state.user.username;
     $('#profile-balance').textContent = fmt(state.user.balance);
-    $('#profile-avatar').textContent = state.user.avatar;
+    $('#profile-email').value = state.user.email || '';
+    renderProfileAvatar();
     buildEmojiGrid($('#profile-emoji-grid'), async (em) => {
       try {
         const u = await API.updateProfile({ avatar: em });
         state.user = u;
-        $('#profile-avatar').textContent = em;
+        renderProfileAvatar();
         renderAuthBlock();
       } catch (e) { toast(prettyErr(e), 'err'); }
     }, state.user.avatar);
@@ -563,12 +649,24 @@
 
   // ----- streams + chat (real-time via WS)
   let canvasRAF = null;
+  function showVideoEl(url, type) {
+    const v = $('#stream-video-el');
+    v.src = API.mediaUrl(url);
+    v.hidden = false;
+    $('#stream-iframe').hidden = true;
+    $('#stream-canvas').hidden = true;
+    if (canvasRAF) cancelAnimationFrame(canvasRAF);
+    v.play().catch(() => {});
+  }
+
   async function openStreamFor(ev) {
     state.activeStream.eventId = ev.id;
     $('#stream-backdrop').hidden = false;
     $('#stream-title').textContent = (ev.is_live ? '🔴 ' : '') + ev.title;
     $('#stream-iframe').hidden = true;
     $('#stream-iframe').src = '';
+    const ve = $('#stream-video-el');
+    ve.hidden = true; ve.pause(); ve.removeAttribute('src'); ve.load();
     const canvas = $('#stream-canvas'); canvas.hidden = false;
     startCanvasAnim(canvas, ev);
     $('#chat-messages').innerHTML = '';
@@ -577,10 +675,17 @@
     // load existing stream info
     try {
       const s = await API.getStream(ev.id);
-      if (s && s.url) { showIframe(s.url); }
+      if (s) {
+        if (s.media_url && (s.media_type === 'mp4' || s.media_type === 'webm' || s.media_type === 'hls')) {
+          showVideoEl(s.media_url, s.media_type);
+        } else if (s.url) {
+          showIframe(s.url);
+        }
+      }
       state.activeStream.ownerId = s ? s.owner_id : null;
       $('#stream-stop').hidden = !(s && state.user && s.owner_id === state.user.id);
       $('#stream-set-url').hidden = !state.user;
+      $('#stream-upload').hidden = !state.user;
     } catch {}
 
     // history
@@ -652,6 +757,12 @@
       let data; try { data = JSON.parse(m.data); } catch { return; }
       if (data.type === 'chat' && data.message) appendChatMessage(data.message);
       else if (data.type === 'viewers') $('#stream-viewers').textContent = data.viewers + ' 👀';
+      else if (data.type === 'error') {
+        if (data.error === 'rate_limited') toast(T('err_rate_limited'), 'err');
+        else if (data.error === 'muted') toast(T('err_muted'), 'err');
+        else if (data.error === 'banned') toast(T('err_banned'), 'err');
+        else if (data.error === 'auth_required') toast(T('err_401'), 'err');
+      }
     };
     ws.onerror = () => {};
     ws.onclose = () => {};
@@ -672,7 +783,13 @@
   function appendChatMessage(msg) {
     const list = $('#chat-messages');
     const el = document.createElement('div'); el.className = 'chat-msg';
-    el.innerHTML = `<span class="chat-avatar">${msg.avatar}</span><div><div class="chat-author">${escapeHtml(msg.username)}</div><div class="chat-text">${escapeHtml(msg.text)}</div></div>`;
+    const ava = msg.avatar_url
+      ? `<img class="avatar-img" src="${escapeHtml(API.mediaUrl(msg.avatar_url))}" alt=""/>`
+      : `<span class="chat-avatar">${msg.avatar || '🦊'}</span>`;
+    const text = msg.is_deleted
+      ? `<i class="chat-deleted">[deleted]</i>`
+      : escapeHtml(msg.text);
+    el.innerHTML = `${ava}<div><div class="chat-author">${escapeHtml(msg.username)}</div><div class="chat-text">${text}</div></div>`;
     list.appendChild(el);
     list.scrollTop = list.scrollHeight;
   }
@@ -692,14 +809,33 @@
   async function startMyStream() {
     if (!state.user) { openAuth('login'); return; }
     const url = prompt(T('prompt_stream_url'));
+    if (url === null) return;
     try {
-      const s = await API.startStream(state.activeStream.eventId, url || null);
+      const s = await API.startStream(state.activeStream.eventId, { url: url || null });
       if (s.url) showIframe(s.url);
       state.activeStream.ownerId = s.owner_id;
       $('#stream-stop').hidden = false;
       await refreshEvents(); renderEvents();
       toast(T('stream_started'), 'ok');
     } catch (e) { toast(prettyErr(e), 'err'); }
+  }
+  async function uploadStreamFile(file) {
+    if (!state.user || !file) return;
+    try {
+      showLoader(true);
+      const up = await API.uploadStream(file);
+      const s = await API.startStream(state.activeStream.eventId, {
+        url: null,
+        media_url: up.media_url,
+        media_type: up.media_type,
+      });
+      showVideoEl(s.media_url, s.media_type);
+      state.activeStream.ownerId = s.owner_id;
+      $('#stream-stop').hidden = false;
+      await refreshEvents(); renderEvents();
+      toast(T('stream_started'), 'ok');
+    } catch (e) { toast(prettyErr(e), 'err'); }
+    finally { showLoader(false); }
   }
   async function stopMyStream() {
     try {
@@ -744,11 +880,22 @@
       return;
     }
     const wrap = document.createElement('div'); wrap.className = 'user-chip';
+    const u = state.user;
+    const avaHtml = u.avatar_url
+      ? `<img class="avatar-img" src="${escapeHtml(API.mediaUrl(u.avatar_url))}" alt=""/>`
+      : `<span>${u.avatar || '🦊'}</span>`;
+    const adminPill = u.is_admin
+      ? '<span class="user-admin-pill">ADMIN</span>'
+      : (u.is_moderator ? '<span class="user-mod-pill">MOD</span>' : '');
+    const adminLink = (u.is_admin || u.is_moderator)
+      ? `<a class="btn-ghost" href="admin.html" title="${T('admin_panel')}">🛡</a>`
+      : '';
     wrap.innerHTML = `
       <button class="balance-btn" id="topup-btn" title="${T('payment_topup')}">+</button>
-      <span id="balance" class="balance">${fmt(state.user.balance)}</span>
+      <span id="balance" class="balance">${fmt(u.balance)}</span>
       <button class="balance-btn" id="withdraw-btn" title="${T('payment_withdraw')}">↗</button>
-      <button class="user-btn" id="user-btn"><span>${state.user.avatar}</span><span class="username">${escapeHtml(state.user.username)}</span></button>
+      ${adminLink}
+      <button class="user-btn" id="user-btn">${avaHtml}<span class="username">${escapeHtml(u.username)}</span>${adminPill}</button>
     `;
     el.appendChild(wrap);
     $('#topup-btn').addEventListener('click', () => openPayment('topup'));
@@ -865,11 +1012,61 @@
     $('#stream-close').addEventListener('click', closeStream);
     $('#stream-set-url').addEventListener('click', startMyStream);
     $('#stream-stop').addEventListener('click', stopMyStream);
+    $('#stream-upload').addEventListener('click', () => $('#stream-upload-file').click());
+    $('#stream-upload-file').addEventListener('change', e => {
+      const f = e.target.files && e.target.files[0];
+      if (f) uploadStreamFile(f);
+      e.target.value = '';
+    });
     $('#chat-send').addEventListener('click', sendChatMessage);
     $('#chat-text').addEventListener('keydown', e => { if (e.key === 'Enter') sendChatMessage(); });
 
     // emoji palette for register
-    buildEmojiGrid($('#emoji-grid'), em => { pickedAvatar = em; }, pickedAvatar);
+    buildEmojiGrid($('#emoji-grid'), em => { pickedAvatar = em; updateAuthAvatarPreview(); }, pickedAvatar);
+
+    // captcha refresh & avatar file picker (register)
+    $('#auth-captcha-refresh').addEventListener('click', refreshCaptcha);
+    $('#auth-avatar-pick').addEventListener('click', () => $('#auth-avatar-file').click());
+    $('#auth-avatar-file').addEventListener('change', e => {
+      const f = e.target.files && e.target.files[0];
+      if (!f) return;
+      if (f.size > 5 * 1024 * 1024) { toast(T('file_too_large'), 'err'); return; }
+      pickedAvatarFile = f;
+      updateAuthAvatarPreview();
+      $('#auth-avatar-clear').hidden = false;
+    });
+    $('#auth-avatar-clear').addEventListener('click', () => {
+      pickedAvatarFile = null;
+      $('#auth-avatar-file').value = '';
+      $('#auth-avatar-clear').hidden = true;
+      updateAuthAvatarPreview();
+    });
+
+    // profile avatar upload
+    $('#profile-avatar-upload').addEventListener('click', () => $('#profile-avatar-file').click());
+    $('#profile-avatar-file').addEventListener('change', async e => {
+      const f = e.target.files && e.target.files[0]; if (!f) return;
+      if (f.size > 5 * 1024 * 1024) { toast(T('file_too_large'), 'err'); return; }
+      try {
+        showLoader(true);
+        state.user = await API.uploadAvatar(f);
+        renderProfileAvatar();
+        renderAuthBlock();
+        toast(T('avatar_updated'), 'ok');
+      } catch (err) { toast(prettyErr(err), 'err'); }
+      finally { showLoader(false); e.target.value = ''; }
+    });
+    $('#profile-avatar-remove').addEventListener('click', async () => {
+      try { state.user = await API.deleteAvatar(); renderProfileAvatar(); renderAuthBlock(); }
+      catch (err) { toast(prettyErr(err), 'err'); }
+    });
+    $('#profile-save-email').addEventListener('click', async () => {
+      const email = $('#profile-email').value.trim();
+      try {
+        state.user = await API.updateProfile({ email: email || null });
+        toast(T('email_saved'), 'ok');
+      } catch (err) { toast(prettyErr(err), 'err'); }
+    });
 
     // hamburger toggles tabs on mobile
     $('#hamburger').addEventListener('click', () => {

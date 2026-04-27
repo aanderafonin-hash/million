@@ -38,8 +38,37 @@
       throw err;
     }
     if (res.status === 401) {
-      // expired token; clear it and let caller decide what to do
       setToken(null);
+    }
+    let data = null;
+    const ct = res.headers.get('content-type') || '';
+    if (ct.includes('application/json')) {
+      try { data = await res.json(); } catch { data = null; }
+    } else {
+      try { data = await res.text(); } catch { data = null; }
+    }
+    if (!res.ok) {
+      const err = new Error((data && data.detail) || res.statusText || 'error');
+      err.status = res.status;
+      err.data = data;
+      throw err;
+    }
+    return data;
+  }
+
+  async function upload(path, file, fieldName = 'file') {
+    const headers = {};
+    const t = getToken();
+    if (t) headers['Authorization'] = 'Bearer ' + t;
+    const fd = new FormData();
+    fd.append(fieldName, file);
+    let res;
+    try {
+      res = await fetch(BACKEND + path, { method: 'POST', headers, body: fd });
+    } catch (e) {
+      const err = new Error('network');
+      err.network = true;
+      throw err;
     }
     let data = null;
     const ct = res.headers.get('content-type') || '';
@@ -62,14 +91,22 @@
     return `${wsBase}/api/chat/ws/${eventId}`;
   }
 
+  function mediaUrl(relPath) {
+    if (!relPath) return null;
+    if (/^https?:\/\//i.test(relPath)) return relPath;
+    return BACKEND + relPath;
+  }
+
   window.API = {
     base: BACKEND,
     setBase: (url) => { localStorage.setItem('betslife.apiBase', url); location.reload(); },
     getToken,
     setToken,
     isAuthed: () => !!getToken(),
+    mediaUrl,
 
     // auth
+    captcha: () => req('GET', '/api/auth/captcha'),
     register: (b) => req('POST', '/api/auth/register', b),
     login: (b) => req('POST', '/api/auth/login', b),
     me: () => req('GET', '/api/auth/me'),
@@ -77,6 +114,11 @@
     changePassword: (b) => req('POST', '/api/auth/change-password', b),
     recoveryCheck: (b) => req('POST', '/api/auth/recovery/check', b),
     recoveryConfirm: (b) => req('POST', '/api/auth/recovery/confirm', b),
+
+    // uploads
+    uploadAvatar: (file) => upload('/api/uploads/avatar', file),
+    deleteAvatar: () => req('DELETE', '/api/uploads/avatar'),
+    uploadStream: (file) => upload('/api/uploads/stream', file),
 
     // events
     listEvents: ({ category = null, q = null, showResolved = false } = {}) => {
@@ -106,12 +148,48 @@
     // streams
     listStreams: () => req('GET', '/api/streams'),
     getStream: (eventId) => req('GET', `/api/streams/${eventId}`),
-    startStream: (eventId, url) => req('POST', `/api/streams/${eventId}/start`, { url: url || null }),
+    startStream: (eventId, payload) => {
+      const body = (typeof payload === 'string' || payload === null || payload === undefined)
+        ? { url: payload || null }
+        : payload;
+      return req('POST', `/api/streams/${eventId}/start`, body);
+    },
     stopStream: (eventId) => req('POST', `/api/streams/${eventId}/stop`),
 
     // chat
     chatHistory: (eventId) => req('GET', `/api/chat/${eventId}`),
     chatPost: (eventId, text) => req('POST', `/api/chat/${eventId}`, { text }),
     wsUrl,
+
+    // admin
+    adminListUsers: (q = null) => {
+      const qs = q ? '?q=' + encodeURIComponent(q) : '';
+      return req('GET', '/api/admin/users' + qs);
+    },
+    adminBan: (userId, banned, reason = null) =>
+      req('POST', `/api/admin/users/${userId}/ban`, { banned, reason }),
+    adminMute: (userId, minutes) =>
+      req('POST', `/api/admin/users/${userId}/mute`, { minutes }),
+    adminSetRole: (userId, body) =>
+      req('POST', `/api/admin/users/${userId}/role`, body),
+    adminSetBalance: (userId, balance, note = null) =>
+      req('POST', `/api/admin/users/${userId}/balance`, { balance, note }),
+    adminDeleteUser: (userId) => req('DELETE', `/api/admin/users/${userId}`),
+    adminListEvents: (q = null, showResolved = true) => {
+      const params = new URLSearchParams();
+      if (q) params.set('q', q);
+      params.set('show_resolved', showResolved ? '1' : '0');
+      return req('GET', '/api/admin/events?' + params.toString());
+    },
+    adminDeleteEvent: (id) => req('DELETE', `/api/admin/events/${id}`),
+    adminListChat: (eventId = null, limit = 200) => {
+      const params = new URLSearchParams();
+      if (eventId !== null && eventId !== undefined && eventId !== '')
+        params.set('event_id', String(eventId));
+      params.set('limit', String(limit));
+      return req('GET', '/api/admin/chat?' + params.toString());
+    },
+    adminDeleteChat: (msgId) => req('DELETE', `/api/admin/chat/${msgId}`),
+    adminAudit: (limit = 200) => req('GET', `/api/admin/audit?limit=${limit}`),
   };
 })();

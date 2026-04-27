@@ -9,6 +9,7 @@
 <link rel="icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><text y='50' font-size='52'>🎲</text></svg>" />
 </head>
 <body>
+  <div class="virtual-banner" id="virtual-banner" data-i18n="virtual_money_disclaimer">⚠ Все деньги на BetLife виртуальные. Это не реальный букмекер.</div>
   <header class="topbar">
     <div class="logo">
       <span class="logo-mark">🎲</span>
@@ -89,16 +90,36 @@
         </div>
         <div id="auth-avatar-row" class="auth-avatar-row" hidden>
           <span class="hint" data-i18n="auth_choose_avatar">Выбери аватарку</span>
+          <div class="avatar-upload-row">
+            <div class="avatar-upload-preview" id="auth-avatar-preview">🦊</div>
+            <div class="avatar-upload-actions">
+              <input type="file" id="auth-avatar-file" accept="image/*" hidden />
+              <button type="button" class="btn-ghost" id="auth-avatar-pick" data-i18n="upload_photo">📷 Загрузить фото</button>
+              <button type="button" class="btn-ghost" id="auth-avatar-clear" hidden data-i18n="clear">Очистить</button>
+            </div>
+          </div>
           <div class="emoji-grid" id="emoji-grid"></div>
         </div>
         <label class="field">
           <span data-i18n="auth_username">Имя пользователя</span>
           <input type="text" id="auth-username" autocomplete="username" maxlength="30" />
         </label>
+        <label class="field" id="auth-email-field" hidden>
+          <span data-i18n="auth_email">Email (для восстановления, опционально)</span>
+          <input type="email" id="auth-email" autocomplete="email" maxlength="120" />
+        </label>
         <label class="field" id="auth-password-field">
           <span data-i18n="auth_password">Пароль</span>
           <input type="password" id="auth-password" autocomplete="current-password" />
         </label>
+        <div class="field captcha-field" id="auth-captcha-field" hidden>
+          <span data-i18n="auth_captcha">Капча — реши пример</span>
+          <div class="captcha-row">
+            <span class="captcha-question" id="auth-captcha-question">—</span>
+            <input type="text" id="auth-captcha-answer" inputmode="numeric" autocomplete="off" maxlength="10" placeholder="=?" />
+            <button type="button" class="btn-ghost" id="auth-captcha-refresh" title="refresh">↻</button>
+          </div>
+        </div>
         <label class="field" id="auth-recovery-field" hidden>
           <span data-i18n="auth_recovery_code">Код восстановления</span>
           <input type="text" id="auth-recovery-code" autocomplete="off" maxlength="20" />
@@ -184,7 +205,21 @@
           <div><b id="ps-events">0</b><span data-i18n="ps_events">Событий создал</span></div>
         </div>
         <div class="section-title" data-i18n="profile_change_avatar">Сменить аватар</div>
+        <div class="avatar-upload-row">
+          <div class="avatar-upload-preview" id="profile-avatar-preview">🦊</div>
+          <div class="avatar-upload-actions">
+            <input type="file" id="profile-avatar-file" accept="image/*" hidden />
+            <button type="button" class="btn-ghost" id="profile-avatar-upload" data-i18n="upload_photo">📷 Загрузить фото</button>
+            <button type="button" class="btn-ghost" id="profile-avatar-remove" data-i18n="remove_photo" hidden>Удалить фото</button>
+          </div>
+        </div>
         <div class="emoji-grid" id="profile-emoji-grid"></div>
+        <div class="section-title" data-i18n="profile_email">Email</div>
+        <label class="field">
+          <span data-i18n="auth_email">Email</span>
+          <input type="email" id="profile-email" autocomplete="email" maxlength="120" />
+        </label>
+        <button class="btn-ghost" id="profile-save-email" data-i18n="save">Сохранить</button>
         <div class="section-title" data-i18n="profile_change_password">Сменить пароль</div>
         <label class="field">
           <span data-i18n="profile_old_password">Текущий пароль</span>
@@ -285,10 +320,13 @@
       <div class="modal-body stream-body">
         <div class="stream-video" id="stream-video">
           <canvas id="stream-canvas" width="640" height="360"></canvas>
-          <iframe id="stream-iframe" hidden></iframe>
+          <iframe id="stream-iframe" hidden allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe>
+          <video id="stream-video-el" hidden controls playsinline preload="metadata"></video>
         </div>
         <div class="stream-controls" id="stream-controls">
           <button class="btn-ghost" id="stream-set-url" data-i18n="stream_set_url">Указать URL</button>
+          <input type="file" id="stream-upload-file" accept="video/mp4,video/webm" hidden />
+          <button class="btn-ghost" id="stream-upload" data-i18n="stream_upload">📁 Загрузить mp4/webm</button>
           <button class="btn-ghost" id="stream-stop" hidden data-i18n="stream_stop">Завершить трансляцию</button>
         </div>
         <div class="chat">

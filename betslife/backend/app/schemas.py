@@ -1,13 +1,21 @@
 from datetime import datetime
 from typing import List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, EmailStr, Field
+
+
+class CaptchaIssueOut(BaseModel):
+    token: str
+    question: str
 
 
 class RegisterIn(BaseModel):
     username: str = Field(min_length=3, max_length=24)
-    password: str = Field(min_length=3, max_length=80)
+    password: str = Field(min_length=4, max_length=80)
+    email: Optional[EmailStr] = None
     avatar: str = "🦊"
+    captcha_token: str = Field(min_length=1)
+    captcha_answer: str = Field(min_length=1, max_length=20)
 
 
 class LoginIn(BaseModel):
@@ -24,9 +32,15 @@ class TokenOut(BaseModel):
 class UserOut(BaseModel):
     id: int
     username: str
+    email: Optional[str] = None
     avatar: str
+    avatar_url: Optional[str] = None
     balance: float
     created_at: datetime
+    is_admin: bool = False
+    is_moderator: bool = False
+    is_banned: bool = False
+    chat_muted_until: Optional[datetime] = None
     recovery_code: Optional[str] = None  # only sent right after registration
 
     class Config:
@@ -40,16 +54,17 @@ class RecoveryRequestIn(BaseModel):
 class RecoveryConfirmIn(BaseModel):
     username: str
     recovery_code: str
-    new_password: str = Field(min_length=3, max_length=80)
+    new_password: str = Field(min_length=4, max_length=80)
 
 
 class ChangePasswordIn(BaseModel):
     old_password: str
-    new_password: str = Field(min_length=3, max_length=80)
+    new_password: str = Field(min_length=4, max_length=80)
 
 
 class UpdateProfileIn(BaseModel):
     avatar: Optional[str] = None
+    email: Optional[EmailStr] = None
 
 
 class OutcomeIn(BaseModel):
@@ -154,6 +169,8 @@ class TransactionOut(BaseModel):
 
 class StreamStartIn(BaseModel):
     url: Optional[str] = None
+    media_url: Optional[str] = None
+    media_type: Optional[str] = None  # mp4|hls|youtube|twitch|placeholder
 
 
 class StreamOut(BaseModel):
@@ -161,6 +178,8 @@ class StreamOut(BaseModel):
     owner_id: int
     owner_username: str
     url: Optional[str]
+    media_url: Optional[str] = None
+    media_type: Optional[str] = None
     started_at: datetime
     is_live: bool
     viewers: int
@@ -172,7 +191,9 @@ class ChatMessageOut(BaseModel):
     user_id: int
     username: str
     avatar: str
+    avatar_url: Optional[str] = None
     text: str
+    is_deleted: bool = False
     created_at: datetime
 
 
@@ -184,6 +205,57 @@ class ExportOut(BaseModel):
     user: UserOut
     transactions: List[TransactionOut]
     bets: List[BetOut]
+
+
+# ------- Admin / moderation -------
+
+
+class AdminUserOut(BaseModel):
+    id: int
+    username: str
+    email: Optional[str] = None
+    avatar: str
+    avatar_url: Optional[str] = None
+    balance: float
+    is_admin: bool
+    is_moderator: bool
+    is_banned: bool
+    ban_reason: Optional[str] = None
+    chat_muted_until: Optional[datetime] = None
+    created_at: datetime
+    bets_count: int = 0
+    events_count: int = 0
+
+
+class AdminBanIn(BaseModel):
+    banned: bool
+    reason: Optional[str] = None
+
+
+class AdminMuteIn(BaseModel):
+    minutes: int = Field(ge=0, le=24 * 60 * 30)  # up to ~30 days
+
+
+class AdminRoleIn(BaseModel):
+    is_moderator: Optional[bool] = None
+    is_admin: Optional[bool] = None
+
+
+class AdminBalanceIn(BaseModel):
+    balance: float = Field(ge=0)
+    note: Optional[str] = None
+
+
+class AdminAuditOut(BaseModel):
+    id: int
+    actor_user_id: int
+    actor_username: Optional[str] = None
+    action: str
+    target_user_id: Optional[int] = None
+    target_event_id: Optional[int] = None
+    target_chat_msg_id: Optional[int] = None
+    note: Optional[str] = None
+    created_at: datetime
 
 
 TokenOut.model_rebuild()

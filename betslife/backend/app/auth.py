@@ -55,6 +55,8 @@ def get_current_user(
     user = session.exec(select(User).where(User.id == uid)).first()
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="user not found")
+    if user.is_banned:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="account banned")
     return user
 
 
@@ -67,4 +69,19 @@ def get_current_user_optional(
     uid = decode_token(token)
     if uid is None:
         return None
-    return session.exec(select(User).where(User.id == uid)).first()
+    user = session.exec(select(User).where(User.id == uid)).first()
+    if user and user.is_banned:
+        return None
+    return user
+
+
+def require_moderator(user: User = Depends(get_current_user)) -> User:
+    if not (user.is_admin or user.is_moderator):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="moderator required")
+    return user
+
+
+def require_admin(user: User = Depends(get_current_user)) -> User:
+    if not user.is_admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="admin required")
+    return user
