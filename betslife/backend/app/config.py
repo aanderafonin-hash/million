@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     cors_origins: list[str] = ["*"]
     sportsdb_key: str = "3"  # public free key
     auto_resolve_interval_sec: int = 60
-    site_name: str = "BetLife"
+    site_name: str = "WorldPari"
     # First admin: when this username registers (or already exists) it gets is_admin=true.
     initial_admin_username: str = "e2e_andrey"
     chat_min_interval_sec: float = 2.0
