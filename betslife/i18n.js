@@ -1121,7 +1121,7 @@
     history_all: 'All', history_pending: 'Pending', history_won: 'Won', history_lost: 'Lost',
     history_empty: 'No bets yet', login_to_see_history: 'Sign in to see your bet history',
     empty_events: 'No events here yet.', empty_events_hint: 'Create one or check another tab.',
-    source_seed: 'Featured', source_user: 'Community', source_sportsdb: 'Live sport', source_weather: 'Weather',
+    source_seed: 'WorldPari', source_user: 'Community', source_sportsdb: 'Live sport', source_weather: 'Weather',
     stream_set_url: 'Set URL', stream_stop: 'End stream',
     stream_started: 'Stream started', stream_stopped: 'Stream stopped',
     prompt_stream_url: 'Paste a YouTube/Twitch URL (or leave empty for an animated placeholder)',
