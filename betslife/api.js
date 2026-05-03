@@ -10,6 +10,13 @@
     if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
       return 'http://localhost:8000';
     }
+    // WorldPari domains and any host that proxies /api/* to the backend (Caddy / nginx).
+    const host = location.hostname;
+    if (host === 'worldpari.ru' || host === 'www.worldpari.ru' ||
+        host === 'worldpari.com' || host === 'www.worldpari.com' ||
+        host === '111.88.149.53') {
+      return ''; // same-origin — Caddy routes /api/* to backend container
+    }
     return 'https://betslife-backend-attcywev.fly.dev';
   })();
 
@@ -87,7 +94,13 @@
   }
 
   function wsUrl(eventId) {
-    const wsBase = BACKEND.replace(/^http/i, 'ws');
+    let wsBase;
+    if (BACKEND) {
+      wsBase = BACKEND.replace(/^http/i, 'ws');
+    } else {
+      // Same-origin via Caddy
+      wsBase = (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host;
+    }
     return `${wsBase}/api/chat/ws/${eventId}`;
   }
 
