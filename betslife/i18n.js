@@ -157,9 +157,10 @@
   const T = {
     en: {
       tagline: 'bets on real life',
-      tab_life: 'Life', tab_sport: 'Sport', tab_weird: 'Weird',
+      tab_life: 'Life', tab_community: 'Community', tab_sport: 'Sport', tab_weird: 'Weird',
       tab_office: 'Office', tab_home: 'Home', tab_mine: 'Mine', tab_history: 'History',
       tab_streams: 'Live',
+      volume: 'volume', buy: 'Buy',
       balance: 'Balance', topup: 'Top up', withdraw: 'Withdraw', logout: 'Sign out',
       login: 'Sign in', register: 'Register', signin_or_register: 'Sign in / Register',
       coupon: 'Coupon', clear: 'Clear', empty_coupon: 'Pick an outcome to add it to the coupon.',
@@ -237,9 +238,10 @@
     },
     ru: {
       tagline: 'ставки на жизнь',
-      tab_life: 'Жизнь', tab_sport: 'Спорт', tab_weird: 'Абсурд',
+      tab_life: 'Жизнь', tab_community: 'Сообщество', tab_sport: 'Спорт', tab_weird: 'Абсурд',
       tab_office: 'Офис', tab_home: 'Дома', tab_mine: 'Мои', tab_history: 'История',
       tab_streams: 'Эфиры',
+      volume: 'объём', buy: 'Купить',
       balance: 'Баланс', topup: 'Пополнить', withdraw: 'Вывести', logout: 'Выйти',
       login: 'Войти', register: 'Регистрация', signin_or_register: 'Войти / Регистрация',
       coupon: 'Купон', clear: 'Очистить',

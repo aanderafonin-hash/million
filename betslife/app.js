@@ -334,7 +334,9 @@
 
   // ----- events list / categories / search
   async function refreshEvents() {
-    const cat = (state.category === 'all' || state.category === 'streams' || state.category === 'history') ? null : state.category;
+    // 'all', 'streams', 'history', 'community', 'mine' are not real backend categories.
+    const passthrough = new Set(['all', 'streams', 'history', 'community', 'mine']);
+    const cat = passthrough.has(state.category) ? null : state.category;
     try {
       const list = await API.listEvents({ category: cat, q: state.search || null });
       state.events = list;
@@ -347,31 +349,52 @@
     container.querySelectorAll('.event-card').forEach(n => n.remove());
     let visible = state.events;
     if (state.category === 'streams') visible = visible.filter(e => e.is_live);
+    if (state.category === 'community') visible = visible.filter(e => e.source === 'user');
+    if (state.category === 'mine') {
+      if (state.user) visible = visible.filter(e => e.owner_id === state.user.id);
+      else visible = [];
+    }
     if (state.category === 'history') {
       renderHistoryView(container);
       empty.hidden = true;
       return;
     }
+    // Main feed: hide community (user-created) markets unless explicitly browsing them.
+    if (state.category === 'all') visible = visible.filter(e => e.source !== 'user');
     visible.sort((a, b) => (b.is_live - a.is_live) || 0);
     if (visible.length === 0) { empty.hidden = false; return; }
     empty.hidden = true;
     visible.forEach(ev => container.appendChild(buildEventCard(ev)));
   }
 
+  function pctOf(prob) {
+    const n = Math.round(Number(prob) * 100);
+    return Math.max(1, Math.min(99, n));
+  }
+
   function buildEventCard(ev) {
     const card = document.createElement('div');
     card.className = 'event-card';
-    card.style.background = `linear-gradient(135deg, ${ev.color1}22, ${ev.color2}22), var(--card)`;
-    card.style.borderLeft = `3px solid ${ev.color1}`;
+    card.style.borderLeftColor = ev.color1 || '';
 
     const head = document.createElement('div'); head.className = 'event-head';
     const left = document.createElement('div'); left.className = 'event-left';
     const em = document.createElement('div'); em.className = 'event-emoji'; em.textContent = ev.emoji || '🎯';
-    const titleWrap = document.createElement('div');
+    const titleWrap = document.createElement('div'); titleWrap.style.minWidth = '0';
     const title = document.createElement('div'); title.className = 'event-title'; title.textContent = ev.title;
     const meta = document.createElement('div'); meta.className = 'event-meta';
-    if (ev.owner_username) meta.textContent = `${ev.owner_avatar || ''} ${ev.owner_username}`;
-    else meta.textContent = T('source_' + (ev.source || 'seed')) || ev.source;
+    if (ev.owner_username) {
+      meta.textContent = `${ev.owner_avatar || ''} ${ev.owner_username} · ${T('source_user') || 'community'}`;
+    } else {
+      meta.textContent = T('source_' + (ev.source || 'seed')) || ev.source;
+    }
+    if (ev.is_live) {
+      const livePill = document.createElement('span');
+      livePill.className = 'live-pill';
+      livePill.textContent = T('live') || 'LIVE';
+      meta.appendChild(document.createTextNode(' '));
+      meta.appendChild(livePill);
+    }
     titleWrap.appendChild(title); titleWrap.appendChild(meta);
     left.appendChild(em); left.appendChild(titleWrap);
     head.appendChild(left);
@@ -379,7 +402,8 @@
     const right = document.createElement('div'); right.className = 'event-right';
     const liveBtn = document.createElement('button');
     liveBtn.className = 'btn-ghost btn-sm';
-    liveBtn.textContent = ev.is_live ? '🔴 ' + T('live') : '📺 ' + T('go_live');
+    liveBtn.textContent = ev.is_live ? '🔴' : '📺';
+    liveBtn.title = ev.is_live ? T('live') : T('go_live');
     liveBtn.addEventListener('click', () => openStreamFor(ev));
     right.appendChild(liveBtn);
     if (state.user && ev.owner_id === state.user.id && ev.resolved_outcome_index === null) {
@@ -387,7 +411,7 @@
       del.className = 'btn-ghost btn-sm';
       del.textContent = '🗑';
       del.title = T('delete');
-      del.addEventListener('click', () => deleteEvent(ev.id));
+      del.addEventListener('click', (e) => { e.stopPropagation(); deleteEvent(ev.id); });
       right.appendChild(del);
     }
     head.appendChild(right);
@@ -397,23 +421,61 @@
       const desc = document.createElement('div'); desc.className = 'event-desc'; desc.textContent = ev.description;
       card.appendChild(desc);
     }
-    if (ev.starts_at) {
-      const when = document.createElement('div'); when.className = 'event-when';
-      when.textContent = '🕐 ' + new Date(ev.starts_at).toLocaleString();
-      card.appendChild(when);
-    }
 
-    const outs = document.createElement('div'); outs.className = 'outcomes';
-    ev.outcomes.forEach(o => {
-      const btn = document.createElement('button');
-      btn.className = 'outcome';
-      const inCoupon = state.coupon.find(c => c.eventId === ev.id && c.outcomeIdx === o.idx);
-      if (inCoupon) btn.classList.add('selected');
-      btn.innerHTML = `<span class="outcome-label">${o.label}</span><span class="outcome-odds">${oddsFmt(o.odds)}</span>`;
-      btn.addEventListener('click', () => toggleCoupon(ev, o));
-      outs.appendChild(btn);
-    });
+    const outs = document.createElement('div');
+    const isBinary = ev.outcomes.length === 2;
+    outs.className = isBinary ? 'outcomes binary' : 'outcomes multi';
+
+    if (isBinary) {
+      const labels = ev.outcomes.map(o => (o.label || '').toLowerCase());
+      // Heuristic: the first outcome we treat as "Yes" (it's the affirmative option in our seeds:
+      //   "Будет дождь" / "Сухо", "Будут задержки" / "Всё ок", etc.)
+      ev.outcomes.forEach((o, i) => {
+        const btn = document.createElement('button');
+        const isYes = i === 0;
+        btn.className = 'outcome ' + (isYes ? 'yes' : 'no');
+        const inCoupon = state.coupon.find(c => c.eventId === ev.id && c.outcomeIdx === o.idx);
+        if (inCoupon) btn.classList.add('selected');
+        const pct = pctOf(o.probability);
+        btn.innerHTML = `
+          <span class="outcome-pct">${pct}%</span>
+          <span class="outcome-action">${o.label}</span>
+          <span class="outcome-odds-pill">×${oddsFmt(o.odds)}</span>
+        `;
+        btn.title = `${o.label} · вероятность ${pct}% · коэф ${oddsFmt(o.odds)}`;
+        btn.addEventListener('click', () => toggleCoupon(ev, o));
+        outs.appendChild(btn);
+      });
+    } else {
+      ev.outcomes.forEach(o => {
+        const row = document.createElement('button');
+        row.className = 'outcome';
+        const inCoupon = state.coupon.find(c => c.eventId === ev.id && c.outcomeIdx === o.idx);
+        if (inCoupon) row.classList.add('selected');
+        const pct = pctOf(o.probability);
+        row.innerHTML = `
+          <span class="outcome-label-multi">${o.label}</span>
+          <span class="outcome-pct-multi">${pct}%</span>
+          <span class="outcome-buy">${T('buy') || 'Buy'} ×${oddsFmt(o.odds)}</span>
+        `;
+        row.addEventListener('click', () => toggleCoupon(ev, o));
+        outs.appendChild(row);
+      });
+    }
     card.appendChild(outs);
+
+    // Footer: volume + when
+    const footer = document.createElement('div'); footer.className = 'event-footer';
+    const left2 = document.createElement('span'); left2.className = 'vol-label';
+    const vol = (typeof ev.volume === 'number') ? ev.volume : 0;
+    left2.innerHTML = `💸 <span class="vol-amount">${fmt(vol)}</span> ${T('volume') || 'оборот'}`;
+    footer.appendChild(left2);
+    if (ev.starts_at) {
+      const right2 = document.createElement('span');
+      right2.textContent = '🕐 ' + new Date(ev.starts_at).toLocaleDateString();
+      footer.appendChild(right2);
+    }
+    card.appendChild(footer);
     return card;
   }
 
@@ -946,8 +1008,30 @@
     } catch { state.user = null; }
   }
 
+  // ----- theme
+  function applyTheme(t) {
+    document.documentElement.setAttribute('data-theme', t);
+    try { localStorage.setItem('worldpari.theme', t); } catch (e) {}
+    const btn = $('#theme-toggle');
+    if (btn) btn.textContent = (t === 'dark') ? '☀️' : '🌙';
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', t === 'dark' ? '#0b0f14' : '#ffffff');
+  }
+  function initTheme() {
+    let t = 'light';
+    try { t = localStorage.getItem('worldpari.theme') || 'light'; } catch (e) {}
+    applyTheme(t);
+  }
+
   // ----- event wiring
   function wire() {
+    initTheme();
+    const themeBtn = $('#theme-toggle');
+    if (themeBtn) themeBtn.addEventListener('click', () => {
+      const cur = document.documentElement.getAttribute('data-theme') || 'light';
+      applyTheme(cur === 'dark' ? 'light' : 'dark');
+    });
+
     $$('.tab').forEach(t => t.addEventListener('click', () => {
       state.category = t.dataset.cat;
       $$('.tab').forEach(x => x.classList.toggle('active', x === t));

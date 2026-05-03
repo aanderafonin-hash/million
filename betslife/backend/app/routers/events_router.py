@@ -7,7 +7,7 @@ from ..auth import get_current_user
 from ..db import get_session
 from ..models import Event, Outcome, Stream, User
 from ..schemas import EventCreateIn, EventOut
-from ..services.events_repo import serialize_event
+from ..services.events_repo import compute_volumes_by_event, serialize_event
 from ..services.odds import normalize_probabilities, prob_to_odds
 from ..services.viewers import all_counts
 
@@ -36,7 +36,16 @@ def list_events(
         for s in session.exec(select(Stream).where(Stream.is_live == True)).all()
     }
     counts = all_counts()
-    return [serialize_event(session, e, viewer_counts=counts, live_event_ids=live_ids) for e in events]
+    volumes = compute_volumes_by_event(session)
+    return [
+        serialize_event(
+            session, e,
+            viewer_counts=counts,
+            live_event_ids=live_ids,
+            volumes_by_event=volumes,
+        )
+        for e in events
+    ]
 
 
 @router.get("/{event_id}", response_model=EventOut)
@@ -44,7 +53,8 @@ def get_event(event_id: int, session: Session = Depends(get_session)) -> EventOu
     event = session.exec(select(Event).where(Event.id == event_id)).first()
     if not event:
         raise HTTPException(status_code=404, detail="event not found")
-    return serialize_event(session, event)
+    volumes = compute_volumes_by_event(session)
+    return serialize_event(session, event, volumes_by_event=volumes)
 
 
 @router.post("", response_model=EventOut)

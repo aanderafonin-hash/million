@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-<meta name="theme-color" content="#0e1116" />
+<meta name="theme-color" content="#ffffff" />
+<script>(function(){try{var t=localStorage.getItem('worldpari.theme')||'light';document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
 <title>WorldPari — ставки на жизнь</title>
 <link rel="stylesheet" href="style.css" />
 <link rel="icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><text y='50' font-size='52'>🎲</text></svg>" />
@@ -19,10 +20,11 @@
 
     <nav class="tabs" id="tabs">
       <button class="tab active" data-cat="all" data-i18n-html="🌐 {tab_all}"></button>
-      <button class="tab" data-cat="life" data-i18n-html="🎭 {tab_life}"></button>
-      <button class="tab" data-cat="streams" data-i18n-html="🔴 {tab_streams}"></button>
       <button class="tab" data-cat="sport" data-i18n-html="⚽ {tab_sport}"></button>
       <button class="tab" data-cat="weather" data-i18n-html="☔ {tab_weather}"></button>
+      <button class="tab" data-cat="life" data-i18n-html="🎭 {tab_life}"></button>
+      <button class="tab" data-cat="community" data-i18n-html="👥 {tab_community}"></button>
+      <button class="tab" data-cat="streams" data-i18n-html="🔴 {tab_streams}"></button>
       <button class="tab" data-cat="weird" data-i18n-html="🌀 {tab_weird}"></button>
       <button class="tab" data-cat="office" data-i18n-html="💼 {tab_office}"></button>
       <button class="tab" data-cat="home" data-i18n-html="🏠 {tab_home}"></button>
@@ -32,6 +34,7 @@
 
     <div class="topbar-right">
       <input type="search" id="search-input" class="search-input" placeholder="🔎" autocomplete="off" />
+      <button class="theme-toggle" id="theme-toggle" type="button" title="Theme" aria-label="Toggle theme">🌙</button>
       <div class="lang-picker" title="Language">
         <span id="lang-current">🌐 RU</span>
         <select id="lang-select" aria-label="Language"></select>

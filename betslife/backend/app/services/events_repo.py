@@ -1,9 +1,27 @@
 from typing import List, Optional
 
+from sqlalchemy import func
 from sqlmodel import Session, select
 
-from ..models import Event, Outcome, Stream, User
+from ..models import Bet, BetLeg, Event, Outcome, Stream, User
 from ..schemas import EventOut, OutcomeOut
+
+
+def compute_volumes_by_event(session: Session) -> dict[int, float]:
+    """Aggregate total stake volume per event by joining bets with legs."""
+    rows = session.exec(
+        select(BetLeg.event_id, func.sum(Bet.stake))
+        .join(Bet, Bet.id == BetLeg.bet_id)
+        .group_by(BetLeg.event_id)
+    ).all()
+    out: dict[int, float] = {}
+    for row in rows:
+        # SQLAlchemy may return Row or tuple; both unpack the same way.
+        eid, vol = row
+        if eid is None:
+            continue
+        out[int(eid)] = float(vol or 0.0)
+    return out
 
 
 def serialize_event(
@@ -11,6 +29,7 @@ def serialize_event(
     event: Event,
     viewer_counts: Optional[dict[int, int]] = None,
     live_event_ids: Optional[set[int]] = None,
+    volumes_by_event: Optional[dict[int, float]] = None,
 ) -> EventOut:
     outs = session.exec(
         select(Outcome).where(Outcome.event_id == event.id).order_by(Outcome.idx)
@@ -58,6 +77,7 @@ def serialize_event(
         ],
         is_live=is_live,
         viewers=viewers,
+        volume=(volumes_by_event or {}).get(event.id, 0.0),
     )
 
 

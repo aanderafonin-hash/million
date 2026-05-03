@@ -112,6 +112,7 @@ class EventOut(BaseModel):
     outcomes: List[OutcomeOut]
     is_live: bool
     viewers: int = 0
+    volume: float = 0.0
 
 
 class BetLegIn(BaseModel):
