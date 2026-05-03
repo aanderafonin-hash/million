@@ -1,113 +1,286 @@
-"""Seed the DB with the default catalogue of life/weird events on first start."""
+"""Seed the DB with a Polymarket-style catalogue of realistic events.
+
+A `SEED_VERSION` flag lets us replace the old seed catalogue without manual
+DB intervention: when the version on disk differs from the constant here,
+all `source='seed'` events are cleared (along with their outcomes, bet legs
+and any bets referencing them) and the new catalogue is inserted.
+"""
 from sqlmodel import Session, select
 
-from ..models import Event, Outcome
+from ..models import Bet, BetLeg, Event, Outcome
 from ..services.odds import normalize_probabilities, prob_to_odds
 
 
+SEED_VERSION = "v2-realistic-2026-04"
+
+
 SEED_EVENTS = [
-    # life
+    # ───────── Политика ─────────
     {
-        "title": "Кот скинет что-то со стола сегодня",
-        "description": "Любой неконтролируемый акт котоагрессии.",
+        "title": "США снимут пошлины с китайского импорта в 2026?",
+        "description": "Резолв: до 31.12.2026 США объявят о снятии или существенном снижении (>50%) тарифов, введённых в 2025.",
+        "category": "politics",
+        "emoji": "🇺🇸",
+        "color1": "#3a82f7", "color2": "#1d4ed8",
+        "outcomes": [("Да", 0.22), ("Нет", 0.78)],
+    },
+    {
+        "title": "Состоится ли встреча Путин — Трамп до конца 2026?",
+        "description": "Любая личная очная встреча двух лидеров до 31.12.2026.",
+        "category": "politics",
+        "emoji": "🤝",
+        "color1": "#ef4a4a", "color2": "#b71c1c",
+        "outcomes": [("Состоится", 0.55), ("Не состоится", 0.45)],
+    },
+    {
+        "title": "Будет ли в США правительственный shutdown в 2026?",
+        "description": "Полное или частичное прекращение работы федерального правительства США из-за непринятия бюджета.",
+        "category": "politics",
+        "emoji": "🏛️",
+        "color1": "#94a3b8", "color2": "#475569",
+        "outcomes": [("Будет", 0.62), ("Не будет", 0.38)],
+    },
+    {
+        "title": "Украина и Россия подпишут перемирие до конца 2026?",
+        "description": "Любая официальная договорённость о прекращении огня между сторонами до 31.12.2026.",
+        "category": "politics",
+        "emoji": "🕊️",
+        "color1": "#10b981", "color2": "#047857",
+        "outcomes": [("Да", 0.30), ("Нет", 0.70)],
+    },
+
+    # ───────── Крипта ─────────
+    {
+        "title": "Bitcoin превысит $150 000 в 2026?",
+        "description": "Закроется ли BTC хотя бы один день выше $150 000 (по CoinGecko USD) в 2026 году.",
+        "category": "crypto",
+        "emoji": "₿",
+        "color1": "#f7931a", "color2": "#b06600",
+        "outcomes": [("Да", 0.42), ("Нет", 0.58)],
+    },
+    {
+        "title": "Ethereum обгонит Bitcoin по капитализации в 2026?",
+        "description": "Любой день в 2026, когда Market Cap ETH > Market Cap BTC по CoinGecko.",
+        "category": "crypto",
+        "emoji": "Ξ",
+        "color1": "#627eea", "color2": "#3c5ad8",
+        "outcomes": [("Да", 0.07), ("Нет", 0.93)],
+    },
+    {
+        "title": "SEC одобрит Solana ETF до конца 2026?",
+        "description": "Любой spot Solana ETF с одобрением SEC, торгуемый на регулируемой бирже.",
+        "category": "crypto",
+        "emoji": "🪙",
+        "color1": "#14f195", "color2": "#0c8a55",
+        "outcomes": [("Одобрит", 0.65), ("Нет", 0.35)],
+    },
+    {
+        "title": "Bitcoin упадёт ниже $50 000 в 2026?",
+        "description": "Любой закрывающий день в 2026, где BTC < $50 000.",
+        "category": "crypto",
+        "emoji": "📉",
+        "color1": "#ef4a4a", "color2": "#7a1212",
+        "outcomes": [("Упадёт", 0.18), ("Не упадёт", 0.82)],
+    },
+
+    # ───────── Технологии ─────────
+    {
+        "title": "GPT-5 выйдет до конца 2026?",
+        "description": "Официальный публичный релиз модели от OpenAI с названием GPT-5 (не превью).",
+        "category": "tech",
+        "emoji": "🧠",
+        "color1": "#10b981", "color2": "#047857",
+        "outcomes": [("Выйдет", 0.72), ("Не выйдет", 0.28)],
+    },
+    {
+        "title": "Apple выпустит складной iPhone до 2027?",
+        "description": "Официальный анонс foldable iPhone до 31.12.2026.",
+        "category": "tech",
+        "emoji": "📱",
+        "color1": "#a3a3a3", "color2": "#525252",
+        "outcomes": [("Выпустит", 0.20), ("Не выпустит", 0.80)],
+    },
+    {
+        "title": "Tesla запустит полностью автономное такси (FSD без водителя) в 2026?",
+        "description": "Робо-такси Tesla без оператора, доступный публично хотя бы в одном городе США.",
+        "category": "tech",
+        "emoji": "🚗",
+        "color1": "#cc0000", "color2": "#7f0000",
+        "outcomes": [("Запустит", 0.55), ("Не запустит", 0.45)],
+    },
+    {
+        "title": "SpaceX совершит пилотируемый полёт на Марс в 2026?",
+        "description": "Любой пилотируемый старт SpaceX к Марсу в 2026.",
+        "category": "tech",
+        "emoji": "🚀",
+        "color1": "#ff5722", "color2": "#7a1f06",
+        "outcomes": [("Да", 0.03), ("Нет", 0.97)],
+    },
+
+    # ───────── Поп-культура ─────────
+    {
+        "title": "Тейлор Свифт объявит о свадьбе в 2026?",
+        "description": "Публичное объявление о помолвке или свадьбе самой Тейлор Свифт в 2026.",
+        "category": "culture",
+        "emoji": "💍",
+        "color1": "#ec4899", "color2": "#9d174d",
+        "outcomes": [("Да", 0.62), ("Нет", 0.38)],
+    },
+    {
+        "title": "Будет ли GTA VI выпущен в 2026?",
+        "description": "Релиз GTA VI до 31.12.2026 (любая платформа).",
+        "category": "culture",
+        "emoji": "🎮",
+        "color1": "#22c55e", "color2": "#15803d",
+        "outcomes": [("Да", 0.55), ("Нет", 0.45)],
+    },
+    {
+        "title": "Оскар за лучший фильм 2026 получит работа Кристофера Нолана?",
+        "description": "Победитель в категории Best Picture на Academy Awards 2026.",
+        "category": "culture",
+        "emoji": "🎬",
+        "color1": "#fbbf24", "color2": "#a16207",
+        "outcomes": [("Получит", 0.18), ("Не получит", 0.82)],
+    },
+
+    # ───────── Спорт (вне auto-feed TheSportsDB) ─────────
+    {
+        "title": "Россия вернётся на летние Олимпийские игры 2028?",
+        "description": "Российские спортсмены под флагом РФ на Олимпиаде Лос-Анджелес 2028.",
+        "category": "sport",
+        "emoji": "🏅",
+        "color1": "#f59e0b", "color2": "#92400e",
+        "outcomes": [("Вернётся", 0.40), ("Не вернётся", 0.60)],
+    },
+    {
+        "title": "Реал Мадрид выиграет Лигу чемпионов 2025/26?",
+        "description": "Победитель UEFA Champions League 2025/26.",
+        "category": "sport",
+        "emoji": "⚽",
+        "color1": "#fefefe", "color2": "#9ca3af",
+        "outcomes": [("Да", 0.22), ("Нет", 0.78)],
+    },
+    {
+        "title": "Макс Ферстаппен возьмёт чемпионский титул F1 в 2026?",
+        "description": "Чемпион мира Formula 1 2026 — Max Verstappen.",
+        "category": "sport",
+        "emoji": "🏎️",
+        "color1": "#1e40af", "color2": "#0b1f5c",
+        "outcomes": [("Да", 0.45), ("Нет", 0.55)],
+    },
+    {
+        "title": "Холанд забьёт 40+ голов в АПЛ за сезон 25/26?",
+        "description": "Эрлинг Холанд (Manchester City) забьёт ≥40 голов в матчах Premier League сезона 2025/26.",
+        "category": "sport",
+        "emoji": "⚽",
+        "color1": "#7dd3fc", "color2": "#0369a1",
+        "outcomes": [("Да", 0.35), ("Нет", 0.65)],
+    },
+
+    # ───────── Жизнь (более правдоподобные) ─────────
+    {
+        "title": "Цена на бензин АИ-95 в Москве превысит 80₽/л в 2026?",
+        "description": "Средняя розничная цена АИ-95 на московских АЗС > 80₽ за литр (по данным Росстат).",
         "category": "life",
-        "emoji": "🐈",
-        "color1": "#ff7a18",
-        "color2": "#3a8dff",
-        "outcomes": [("Скинет", 0.65), ("Будет послушным", 0.35)],
+        "emoji": "⛽",
+        "color1": "#f59e0b", "color2": "#92400e",
+        "outcomes": [("Превысит", 0.55), ("Нет", 0.45)],
     },
     {
-        "title": "Опоздание на работу/учёбу завтра",
-        "description": "Опоздание = больше 5 минут от плана.",
+        "title": "Курс доллара превысит 110₽ в 2026?",
+        "description": "Официальный курс ЦБ РФ ≥ 110 ₽/$ в любой день 2026 года.",
         "category": "life",
-        "emoji": "⏰",
-        "color1": "#f04a4a",
-        "color2": "#7a1212",
-        "outcomes": [("Опоздаешь", 0.4), ("В срок", 0.5), ("Прогул", 0.1)],
+        "emoji": "💵",
+        "color1": "#10b981", "color2": "#047857",
+        "outcomes": [("Превысит", 0.60), ("Нет", 0.40)],
     },
     {
-        "title": "Сосед включит дрель в выходной",
-        "description": "До 12:00 в субботу/воскресенье.",
-        "category": "home",
-        "emoji": "🛠️",
-        "color1": "#ff9f43",
-        "color2": "#a44a14",
-        "outcomes": [("Включит", 0.55), ("Тишина", 0.45)],
-    },
-    {
-        "title": "Курьер опоздает с доставкой",
-        "description": "Опоздание = больше 15 минут от обещанного слота.",
+        "title": "Ключевая ставка ЦБ РФ опустится ниже 15% в 2026?",
+        "description": "Решение Банка России о снижении ключевой ставки до значения < 15% в 2026.",
         "category": "life",
-        "emoji": "📦",
-        "color1": "#3aff8d",
-        "color2": "#1a6b3d",
-        "outcomes": [("Опоздает", 0.55), ("Вовремя", 0.45)],
+        "emoji": "🏦",
+        "color1": "#6366f1", "color2": "#3730a3",
+        "outcomes": [("Опустится", 0.50), ("Нет", 0.50)],
     },
     {
-        "title": "Митинг выйдет за слот",
-        "description": "Корпоративная классика.",
-        "category": "office",
-        "emoji": "💼",
-        "color1": "#3a8dff",
-        "color2": "#13386b",
-        "outcomes": [("Выйдет", 0.7), ("Закроется в срок", 0.3)],
-    },
-    # weird
-    {
-        "title": "Приснится бывший/ая на этой неделе",
-        "description": "Только если запомнишь сон.",
-        "category": "weird",
-        "emoji": "😴",
-        "color1": "#a35cff",
-        "color2": "#3d1d6b",
-        "outcomes": [("Приснится", 0.45), ("Нет", 0.55)],
+        "title": "Telegram заблокируют в одной из стран ЕС в 2026?",
+        "description": "Официальная блокировка Telegram в любой стране ЕС в 2026.",
+        "category": "tech",
+        "emoji": "✈️",
+        "color1": "#3b82f6", "color2": "#1e3a8a",
+        "outcomes": [("Заблокируют", 0.20), ("Нет", 0.80)],
     },
     {
-        "title": "Найдёшь в кармане забытые деньги",
-        "description": "Проверь все карманы — даже зимней куртки.",
-        "category": "weird",
-        "emoji": "💰",
-        "color1": "#ffce3a",
-        "color2": "#a37412",
-        "outcomes": [("Найдёшь", 0.3), ("Пусто", 0.7)],
-    },
-    {
-        "title": "Сегодня встретишь знакомого на улице",
-        "description": "Засчитывается реальная встреча, не в чате.",
-        "category": "life",
-        "emoji": "👋",
-        "color1": "#3aff8d",
-        "color2": "#1a6b3d",
-        "outcomes": [("Встретишь", 0.5), ("Нет", 0.5)],
-    },
-    {
-        "title": "Завтра проспишь будильник",
-        "description": "Выключение будильника во сне = победа этого исхода.",
-        "category": "home",
-        "emoji": "🛏️",
-        "color1": "#ff7a18",
-        "color2": "#aa4a04",
-        "outcomes": [("Просплю", 0.4), ("Встану по будильнику", 0.6)],
-    },
-    {
-        "title": "В метро/автобусе сегодня будут массовые задержки",
-        "description": "Объявления о задержке/сбое.",
-        "category": "life",
-        "emoji": "🚇",
-        "color1": "#3a8dff",
-        "color2": "#13386b",
-        "outcomes": [("Будут", 0.35), ("Всё ок", 0.65)],
+        "title": "В России введут блокировку YouTube до конца 2026?",
+        "description": "Полная блокировка YouTube на территории РФ до 31.12.2026.",
+        "category": "tech",
+        "emoji": "📺",
+        "color1": "#ef4444", "color2": "#991b1b",
+        "outcomes": [("Заблокируют", 0.55), ("Нет", 0.45)],
     },
 ]
 
 
-def seed_if_empty(session: Session) -> int:
-    """Insert seed events only if the events table is empty (no user/sport/etc events)."""
-    has_any = session.exec(select(Event).limit(1)).first()
-    if has_any:
+# ---------- runtime API ----------
+
+def _load_version(session: Session) -> str:
+    """Read the seed version marker. Returns empty string if not present."""
+    from sqlalchemy import text  # local import to avoid surfacing in module API
+    try:
+        row = session.exec(  # type: ignore[arg-type]
+            text("SELECT value FROM kv_meta WHERE key='seed_version'")
+        ).first()
+    except Exception:
+        return ""
+    if not row:
+        return ""
+    return row[0] if isinstance(row, tuple) else str(row)
+
+
+def _save_version(session: Session, ver: str) -> None:
+    from sqlalchemy import text
+    session.exec(text("CREATE TABLE IF NOT EXISTS kv_meta (key TEXT PRIMARY KEY, value TEXT)"))  # type: ignore[arg-type]
+    session.exec(  # type: ignore[arg-type]
+        text("INSERT INTO kv_meta(key,value) VALUES('seed_version', :v) "
+             "ON CONFLICT(key) DO UPDATE SET value=excluded.value").bindparams(v=ver)
+    )
+    session.commit()
+
+
+def _wipe_seed_events(session: Session) -> int:
+    """Remove all source='seed' events along with their outcomes and any bets/legs that reference them."""
+    seed_events = session.exec(select(Event).where(Event.source == "seed")).all()
+    seed_event_ids = {e.id for e in seed_events}
+    if not seed_event_ids:
         return 0
+
+    # Delete bet legs referencing those events.
+    legs = session.exec(select(BetLeg).where(BetLeg.event_id.in_(seed_event_ids))).all()  # type: ignore[attr-defined]
+    affected_bet_ids = {l.bet_id for l in legs}
+    for l in legs:
+        session.delete(l)
+    # Delete the bets that lost all their legs (since legs are now gone).
+    for b in session.exec(select(Bet).where(Bet.id.in_(affected_bet_ids))).all():  # type: ignore[attr-defined]
+        session.delete(b)
+    # Delete outcomes.
+    for o in session.exec(select(Outcome).where(Outcome.event_id.in_(seed_event_ids))).all():  # type: ignore[attr-defined]
+        session.delete(o)
+    # Delete events.
+    for e in seed_events:
+        session.delete(e)
+    session.commit()
+    return len(seed_event_ids)
+
+
+def _insert_seed(session: Session) -> int:
     added = 0
     for s in SEED_EVENTS:
+        # Idempotent: if a seed event with this exact title already exists, skip.
+        existing = session.exec(
+            select(Event).where(Event.source == "seed", Event.title == s["title"])
+        ).first()
+        if existing:
+            continue
         event = Event(
             owner_id=None,
             title=s["title"],
@@ -134,4 +307,23 @@ def seed_if_empty(session: Session) -> int:
             )
         session.commit()
         added += 1
+    return added
+
+
+def seed_if_empty(session: Session) -> int:
+    """Idempotent seeding.
+
+    - First start (no events at all): seed the catalogue.
+    - DB has events but seed_version marker is missing or stale: wipe old
+      `source='seed'` events and replace with the new catalogue.
+    - Marker is current: noop.
+    """
+    current = _load_version(session)
+    if current == SEED_VERSION:
+        return 0
+    has_any = session.exec(select(Event).limit(1)).first()
+    if has_any:
+        _wipe_seed_events(session)
+    added = _insert_seed(session)
+    _save_version(session, SEED_VERSION)
     return added
