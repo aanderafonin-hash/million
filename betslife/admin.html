@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="theme-color" content="#0e1116" />
+<title>WorldPari · Admin</title>
+<link rel="stylesheet" href="style.css" />
+<link rel="icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><text y='50' font-size='52'>🛡️</text></svg>" />
+<style>
+  body { background: var(--bg-0); color: var(--text); }
+  .admin-shell { max-width: 1200px; margin: 0 auto; padding: 16px; }
+  .admin-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; gap: 8px; flex-wrap: wrap; }
+  .admin-head h1 { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 22px; }
+  .admin-head .badge {
+    background: linear-gradient(90deg,#ff7a18,#ff3a8d); color: white;
+    padding: 4px 10px; border-radius: 8px; font-size: 13px; font-weight: 700;
+  }
+  .admin-tabs { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 12px; }
+  .admin-tab { padding: 8px 14px; background: var(--bg-1); border: 1px solid var(--border); color: var(--text); border-radius: 8px; cursor: pointer; }
+  .admin-tab.active { background: linear-gradient(90deg,#ff7a18,#ff3a8d); border-color: transparent; }
+  .admin-search { display: flex; gap: 6px; margin-bottom: 12px; }
+  .admin-search input {
+    flex: 1; background: var(--bg-2); border: 1px solid var(--border); color: var(--text);
+    padding: 8px 12px; border-radius: 8px; font-size: 14px;
+  }
+  .admin-table { width: 100%; border-collapse: collapse; background: var(--bg-1); border-radius: 8px; overflow: hidden; }
+  .admin-table th, .admin-table td { padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--border); font-size: 13px; vertical-align: top; }
+  .admin-table th { background: var(--bg-2); font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--mute); }
+  .admin-table tr:last-child td { border-bottom: none; }
+  .admin-table tr.row-banned { background: rgba(255, 70, 70, 0.06); }
+  .admin-table tr.row-deleted { opacity: 0.5; text-decoration: line-through; }
+  .admin-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+  .admin-actions button { padding: 4px 8px; font-size: 12px; border-radius: 6px; }
+  .danger { background: var(--red) !important; border-color: var(--red) !important; color: white !important; }
+  .ok { background: var(--green) !important; border-color: var(--green) !important; color: white !important; }
+  .warn { background: #ffce3a !important; border-color: #ffce3a !important; color: #000 !important; }
+  .small { font-size: 11px; color: var(--mute); }
+  .pill { display: inline-block; padding: 2px 6px; border-radius: 6px; font-size: 11px; font-weight: 700; }
+  .pill.mod { background: #3a8dff; color: white; }
+  .pill.admin { background: linear-gradient(90deg,#ff7a18,#ff3a8d); color: white; }
+  .pill.banned { background: var(--red); color: white; }
+  .pill.muted { background: #ffce3a; color: #000; }
+  .empty { text-align: center; padding: 32px; color: var(--mute); }
+  .ava-cell { display: flex; align-items: center; gap: 6px; }
+  .ava-cell .ava { width: 28px; height: 28px; border-radius: 50%; background: var(--bg-2); display: flex; align-items: center; justify-content: center; font-size: 16px; overflow: hidden; }
+  .ava-cell .ava img { width: 100%; height: 100%; object-fit: cover; }
+  .filter-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .filter-row select, .filter-row input { background: var(--bg-2); border: 1px solid var(--border); color: var(--text); padding: 6px 10px; border-radius: 6px; }
+  .delete-msg { color: var(--mute); font-style: italic; }
+</style>
+</head>
+<body>
+  <div class="virtual-banner" data-i18n="admin_disclaimer">🛡 Панель модератора. Действия логируются в audit log.</div>
+  <div class="admin-shell">
+    <div class="admin-head">
+      <h1>🛡 World<span style="color:var(--accent)">Pari</span> · <span data-i18n="admin_title">Admin Panel</span> <span class="badge" id="admin-role">—</span></h1>
+      <div>
+        <a class="btn-ghost" href="index.html" data-i18n="admin_back_to_site">← Вернуться на сайт</a>
+        <button class="btn-ghost" id="admin-logout" data-i18n="logout">Выйти</button>
+      </div>
+    </div>
+
+    <nav class="admin-tabs" id="admin-tabs">
+      <button class="admin-tab active" data-tab="users" data-i18n="admin_tab_users">👥 Пользователи</button>
+      <button class="admin-tab" data-tab="events" data-i18n="admin_tab_events">🎯 События</button>
+      <button class="admin-tab" data-tab="chat" data-i18n="admin_tab_chat">💬 Чаты</button>
+      <button class="admin-tab" data-tab="audit" data-i18n="admin_tab_audit">📜 Audit</button>
+    </nav>
+
+    <section id="admin-pane" class="admin-pane">
+      <div class="empty" data-i18n="loading">Загрузка…</div>
+    </section>
+  </div>
+
+  <div class="toasts" id="toasts"></div>
+  <div class="loader" id="loader" hidden><div class="spinner"></div></div>
+
+  <script src="i18n.js"></script>
+  <script src="api.js"></script>
+  <script src="admin.js"></script>
+</body>
+</html>

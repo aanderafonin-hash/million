@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="theme-color" content="#ffffff" />
+<script>(function(){try{var t=localStorage.getItem('worldpari.theme')||'light';document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
+
+<title>WorldPari — ставки на события мира</title>
+<meta name="description" content="WorldPari — площадка предсказательных рынков. Ставь на политику, крипту, спорт, технологии, поп-культуру и погоду. Большие и малые события со всего мира, прозрачные вероятности и моментальные коэффициенты." />
+<meta name="keywords" content="ставки, предсказательный рынок, prediction market, politics, crypto, events, вероятности, worldpari" />
+<meta name="author" content="WorldPari" />
+<link rel="canonical" href="https://worldpari.com/" />
+<link rel="alternate" hreflang="ru" href="https://worldpari.ru/" />
+<link rel="alternate" hreflang="en" href="https://worldpari.com/" />
+
+<!-- Open Graph -->
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="WorldPari" />
+<meta property="og:title" content="WorldPari — ставки на события мира" />
+<meta property="og:description" content="Предсказательные рынки: политика, крипта, спорт, технологии. Сотни событий со всего мира, большие % и моментальные коэффициенты." />
+<meta property="og:url" content="https://worldpari.com/" />
+<meta property="og:image" content="https://worldpari.com/og.svg" />
+<meta property="og:locale" content="ru_RU" />
+<meta property="og:locale:alternate" content="en_US" />
+
+<!-- Twitter -->
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="WorldPari — ставки на события мира" />
+<meta name="twitter:description" content="Предсказательные рынки: политика, крипта, спорт, технологии. Сотни событий со всего мира." />
+<meta name="twitter:image" content="https://worldpari.com/og.svg" />
+
+<link rel="stylesheet" href="style.css" />
+<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+<link rel="apple-touch-icon" href="/favicon.svg" />
+<link rel="manifest" href="/manifest.webmanifest" />
+</head>
+<body>
+  <div class="virtual-banner" id="virtual-banner" data-i18n="virtual_money_disclaimer">⚠ Все деньги на WorldPari виртуальные. Это не реальный букмекер.</div>
+  <header class="topbar">
+    <div class="logo">
+      <span class="logo-mark">🎲</span>
+      <span class="logo-text">World<span class="accent">Pari</span></span>
+      <span class="logo-sub" data-i18n="tagline">ставки на жизнь</span>
+    </div>
+
+    <nav class="tabs" id="tabs">
+      <button class="tab active" data-cat="all" data-i18n-html="🌐 {tab_all}"></button>
+      <button class="tab" data-cat="politics" data-i18n-html="🏛️ {tab_politics}"></button>
+      <button class="tab" data-cat="crypto" data-i18n-html="₿ {tab_crypto}"></button>
+      <button class="tab" data-cat="sport" data-i18n-html="⚽ {tab_sport}"></button>
+      <button class="tab" data-cat="tech" data-i18n-html="🤖 {tab_tech}"></button>
+      <button class="tab" data-cat="culture" data-i18n-html="🎬 {tab_culture}"></button>
+      <button class="tab" data-cat="weather" data-i18n-html="☔ {tab_weather}"></button>
+      <button class="tab" data-cat="life" data-i18n-html="🎭 {tab_life}"></button>
+      <button class="tab" data-cat="community" data-i18n-html="👥 {tab_community}"></button>
+      <button class="tab" data-cat="streams" data-i18n-html="🔴 {tab_streams}"></button>
+      <button class="tab" data-cat="leaderboard" data-i18n-html="🏆 {tab_leaderboard}"></button>
+      <button class="tab" data-cat="mine" data-i18n-html="🧑‍🎨 {tab_mine}"></button>
+      <button class="tab" data-cat="history" data-i18n-html="📜 {tab_history}"></button>
+    </nav>
+
+    <div class="topbar-right">
+      <input type="search" id="search-input" class="search-input" placeholder="🔎" autocomplete="off" />
+      <button class="theme-toggle" id="theme-toggle" type="button" title="Theme" aria-label="Toggle theme">🌙</button>
+      <div class="lang-picker" title="Language">
+        <span id="lang-current">🌐 RU</span>
+        <select id="lang-select" aria-label="Language"></select>
+      </div>
+      <div id="auth-block">
+        <!-- filled dynamically: either "Sign in / Register" button or user chip -->
+      </div>
+      <button class="hamburger" id="hamburger" aria-label="Menu">☰</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="events" id="events">
+      <!-- Hero: landing block shown only for logged-out users on the "all" tab.
+           The app.js handles showing/hiding dynamically. -->
+      <div class="hero" id="hero" hidden>
+        <div class="hero-main">
+          <h1 class="hero-title">Ставь на <span class="accent">события мира</span></h1>
+          <p class="hero-sub">Политика, крипта, спорт, технологии, культура — <b>сотни прогнозов</b> со всего мира. Вероятность в процентах, моментальный выигрыш, всё на виртуальные ₽.</p>
+          <div class="hero-steps">
+            <div class="hero-step"><span class="hero-step-num">1</span><div><b>Выбери событие</b><span>Любая категория — мы обновляем каждый день</span></div></div>
+            <div class="hero-step"><span class="hero-step-num">2</span><div><b>Поставь ₽</b><span>Да или нет — по одной кнопке</span></div></div>
+            <div class="hero-step"><span class="hero-step-num">3</span><div><b>Получи выигрыш</b><span>Резолв автоматом по источнику</span></div></div>
+          </div>
+          <div class="hero-cta">
+            <button class="btn-primary" id="hero-cta-register">Начать бесплатно</button>
+            <button class="btn-ghost" id="hero-cta-scroll">↓ Смотреть события</button>
+          </div>
+        </div>
+        <aside class="hero-stats" aria-label="Stats">
+          <div class="hero-stat"><b id="hs-events">60+</b><span>рынков</span></div>
+          <div class="hero-stat"><b id="hs-categories">8</b><span>категорий</span></div>
+          <div class="hero-stat"><b id="hs-users">∞</b><span>предсказателей</span></div>
+        </aside>
+      </div>
+
+      <!-- Toolbar: shown on list tabs (all/politics/...) — controls sort. -->
+      <div class="feed-toolbar" id="feed-toolbar" hidden>
+        <span class="feed-title" id="feed-title" data-i18n="feed_all">Все события</span>
+        <div class="segmented" role="tablist" aria-label="Sort">
+          <button class="seg active" data-sort="trending" data-i18n="sort_trending">🔥 Популярные</button>
+          <button class="seg" data-sort="ending" data-i18n="sort_ending">⏱ Скоро конец</button>
+          <button class="seg" data-sort="new" data-i18n="sort_new">✨ Новые</button>
+          <button class="seg" data-sort="volume" data-i18n="sort_volume">💸 Объём</button>
+        </div>
+      </div>
+
+      <div class="empty-hint" id="empty-hint" hidden>
+        <div class="emoji" style="font-size:48px;line-height:1">🎲</div>
+        <div class="title" data-i18n="empty_events">Пока нет событий в этой категории.</div>
+        <div class="hint" data-i18n="empty_events_hint">Создай своё событие или загляни в другую вкладку.</div>
+      </div>
+    </section>
+
+    <aside class="coupon">
+      <div class="coupon-header">
+        <h2 data-i18n="coupon">Купон</h2>
+        <button class="btn-ghost" id="clear-coupon" data-i18n="clear">Очистить</button>
+      </div>
+      <div class="coupon-items" id="coupon-items">
+        <div class="coupon-empty" data-i18n="empty_coupon">Выбери исход в любом событии, чтобы добавить его в купон.</div>
+      </div>
+      <div class="coupon-summary" id="coupon-summary" hidden>
+        <div class="row"><span data-i18n="events_count">Событий</span><span id="coupon-count">0</span></div>
+        <div class="row"><span data-i18n="total_odds">Общий коэф.</span><span id="coupon-odds">1.00</span></div>
+        <label class="stake-row">
+          <span data-i18n="stake">Ставка, ₽</span>
+          <input type="number" id="stake" min="10" step="10" value="100" inputmode="numeric" />
+        </label>
+        <div class="row big"><span data-i18n="possible_win">Возможный выигрыш</span><span id="coupon-win">100 ₽</span></div>
+        <button class="btn-primary" id="place-bet" data-i18n="place_bet">Сделать ставку</button>
+      </div>
+    </aside>
+  </main>
+
+  <footer class="site-footer">
+    <div class="site-footer-inner">
+      <div class="site-footer-brand">
+        <span class="logo-mark">🎲</span>
+        <span>World<span class="accent">Pari</span></span>
+      </div>
+      <nav class="site-footer-links">
+        <a href="/about.html" data-i18n="footer_about">О проекте</a>
+        <a href="/faq.html" data-i18n="footer_faq">FAQ</a>
+        <a href="/rules.html" data-i18n="footer_rules">Правила</a>
+        <a href="/terms.html" data-i18n="footer_terms">Условия</a>
+        <a href="/privacy.html" data-i18n="footer_privacy">Приватность</a>
+      </nav>
+      <div class="site-footer-meta">© 2026 WorldPari · <span data-i18n="footer_virtual">Все деньги виртуальные.</span></div>
+    </div>
+  </footer>
+
+  <button class="fab" id="add-event-btn" title="Создать событие" data-i18n="add_event">+ Создать событие</button>
+
+  <!-- Modal: auth -->
+  <div class="modal-backdrop" id="auth-backdrop" hidden>
+    <div class="modal modal-narrow">
+      <div class="modal-head">
+        <h3 id="auth-title" data-i18n="login">Войти</h3>
+        <button class="btn-ghost" id="auth-close">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="auth-tabs">
+          <button class="auth-tab active" data-mode="login" data-i18n="login">Войти</button>
+          <button class="auth-tab" data-mode="register" data-i18n="register">Регистрация</button>
+          <button class="auth-tab" data-mode="recover" data-i18n="recover">Восстановить</button>
+        </div>
+        <div id="auth-avatar-row" class="auth-avatar-row" hidden>
+          <span class="hint" data-i18n="auth_choose_avatar">Выбери аватарку</span>
+          <div class="avatar-upload-row">
+            <div class="avatar-upload-preview" id="auth-avatar-preview">🦊</div>
+            <div class="avatar-upload-actions">
+              <input type="file" id="auth-avatar-file" accept="image/*" hidden />
+              <button type="button" class="btn-ghost" id="auth-avatar-pick" data-i18n="upload_photo">📷 Загрузить фото</button>
+              <button type="button" class="btn-ghost" id="auth-avatar-clear" hidden data-i18n="clear">Очистить</button>
+            </div>
+          </div>
+          <div class="emoji-grid" id="emoji-grid"></div>
+        </div>
+        <label class="field">
+          <span data-i18n="auth_username">Имя пользователя</span>
+          <input type="text" id="auth-username" autocomplete="username" maxlength="30" />
+        </label>
+        <label class="field" id="auth-email-field" hidden>
+          <span data-i18n="auth_email">Email (для восстановления, опционально)</span>
+          <input type="email" id="auth-email" autocomplete="email" maxlength="120" />
+        </label>
+        <label class="field" id="auth-password-field">
+          <span data-i18n="auth_password">Пароль</span>
+          <input type="password" id="auth-password" autocomplete="current-password" />
+        </label>
+        <div class="field captcha-field" id="auth-captcha-field" hidden>
+          <span data-i18n="auth_captcha">Капча — реши пример</span>
+          <div class="captcha-row">
+            <span class="captcha-question" id="auth-captcha-question">—</span>
+            <input type="text" id="auth-captcha-answer" inputmode="numeric" autocomplete="off" maxlength="10" placeholder="=?" />
+            <button type="button" class="btn-ghost" id="auth-captcha-refresh" title="refresh">↻</button>
+          </div>
+        </div>
+        <label class="field" id="auth-recovery-field" hidden>
+          <span data-i18n="auth_recovery_code">Код восстановления</span>
+          <input type="text" id="auth-recovery-code" autocomplete="off" maxlength="20" />
+        </label>
+        <label class="field" id="auth-newpw-field" hidden>
+          <span data-i18n="auth_new_password">Новый пароль</span>
+          <input type="password" id="auth-new-password" autocomplete="new-password" />
+        </label>
+        <div class="hint" id="auth-error" style="color: var(--red); display: none;"></div>
+        <div class="hint" id="auth-info" style="color: var(--green); display: none;"></div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn-ghost" id="auth-cancel" data-i18n="cancel">Отмена</button>
+        <button class="btn-primary" id="auth-submit" data-i18n="login">Войти</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: recovery code shown after registration -->
+  <div class="modal-backdrop" id="recovery-shown-backdrop" hidden>
+    <div class="modal modal-narrow">
+      <div class="modal-head">
+        <h3 data-i18n="recovery_save_title">Сохрани код восстановления</h3>
+        <button class="btn-ghost" id="recovery-shown-close">✕</button>
+      </div>
+      <div class="modal-body">
+        <p data-i18n="recovery_save_text">Это твой одноразовый код для сброса пароля. Сохрани его в надёжном месте — увидеть его повторно нельзя.</p>
+        <div class="recovery-code" id="recovery-code-display">—</div>
+        <button class="btn-ghost" id="recovery-copy" data-i18n="copy">Копировать</button>
+      </div>
+      <div class="modal-foot">
+        <button class="btn-primary" id="recovery-shown-ok" data-i18n="recovery_save_ok">Я сохранил код</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: daily bonus -->
+  <div class="modal-backdrop" id="bonus-backdrop" hidden>
+    <div class="modal modal-narrow">
+      <div class="modal-head">
+        <h3 data-i18n="bonus_title">Ежедневный бонус</h3>
+        <button class="btn-ghost" id="bonus-close">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="bonus-hero">
+          <div class="bonus-coin">🪙</div>
+          <div class="bonus-amount" id="bonus-amount">+50 ₽</div>
+          <div class="bonus-streak" id="bonus-streak" data-i18n="bonus_day">День 1</div>
+        </div>
+        <div class="bonus-days" id="bonus-days"></div>
+        <div class="hint" id="bonus-hint"></div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn-primary" id="bonus-claim" data-i18n="bonus_claim">Забрать</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: event detail -->
+  <div class="modal-backdrop" id="event-detail-backdrop" hidden>
+    <div class="modal modal-wide">
+      <div class="modal-head">
+        <h3 id="ed-title">—</h3>
+        <div>
+          <button class="btn-ghost" id="ed-share" title="Share">🔗</button>
+          <button class="btn-ghost" id="ed-close">✕</button>
+        </div>
+      </div>
+      <div class="modal-body" id="ed-body"></div>
+    </div>
+  </div>
+
+  <!-- Modal: payment (top-up / withdraw) -->
+  <div class="modal-backdrop" id="payment-backdrop" hidden>
+    <div class="modal modal-narrow">
+      <div class="modal-head">
+        <h3 id="payment-title" data-i18n="payment_topup">Пополнение баланса</h3>
+        <button class="btn-ghost" id="payment-close">✕</button>
+      </div>
+      <div class="modal-body">
+        <label class="field">
+          <span data-i18n="amount">Сумма, ₽</span>
+          <input type="number" id="payment-amount" min="10" step="10" value="1000" inputmode="numeric" />
+        </label>
+        <div class="quick-amounts" id="payment-quick">
+          <button data-amt="500">+500</button>
+          <button data-amt="1000">+1000</button>
+          <button data-amt="5000">+5000</button>
+          <button data-amt="10000">+10000</button>
+        </div>
+        <div class="hint" id="payment-error" style="color:var(--red);display:none"></div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn-ghost" id="payment-cancel" data-i18n="cancel">Отмена</button>
+        <button class="btn-primary" id="payment-submit" data-i18n="confirm">Подтвердить</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: profile drawer -->
+  <div class="modal-backdrop" id="profile-backdrop" hidden>
+    <div class="modal">
+      <div class="modal-head">
+        <h3 data-i18n="profile">Профиль</h3>
+        <button class="btn-ghost" id="profile-close">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="profile-row">
+          <div class="profile-avatar" id="profile-avatar">🦊</div>
+          <div>
+            <div class="profile-username" id="profile-username">user</div>
+            <div class="profile-balance" id="profile-balance">0 ₽</div>
+          </div>
+        </div>
+        <div class="profile-stats" id="profile-stats">
+          <div><b id="ps-bets">0</b><span data-i18n="ps_bets">Ставок</span></div>
+          <div><b id="ps-won">0</b><span data-i18n="ps_won">Выиграно</span></div>
+          <div><b id="ps-lost">0</b><span data-i18n="ps_lost">Проиграно</span></div>
+          <div><b id="ps-events">0</b><span data-i18n="ps_events">Событий создал</span></div>
+        </div>
+        <div class="section-title" data-i18n="profile_change_avatar">Сменить аватар</div>
+        <div class="avatar-upload-row">
+          <div class="avatar-upload-preview" id="profile-avatar-preview">🦊</div>
+          <div class="avatar-upload-actions">
+            <input type="file" id="profile-avatar-file" accept="image/*" hidden />
+            <button type="button" class="btn-ghost" id="profile-avatar-upload" data-i18n="upload_photo">📷 Загрузить фото</button>
+            <button type="button" class="btn-ghost" id="profile-avatar-remove" data-i18n="remove_photo" hidden>Удалить фото</button>
+          </div>
+        </div>
+        <div class="emoji-grid" id="profile-emoji-grid"></div>
+        <div class="section-title" data-i18n="profile_email">Email</div>
+        <label class="field">
+          <span data-i18n="auth_email">Email</span>
+          <input type="email" id="profile-email" autocomplete="email" maxlength="120" />
+        </label>
+        <button class="btn-ghost" id="profile-save-email" data-i18n="save">Сохранить</button>
+        <div class="section-title" data-i18n="profile_change_password">Сменить пароль</div>
+        <label class="field">
+          <span data-i18n="profile_old_password">Текущий пароль</span>
+          <input type="password" id="profile-old-password" />
+        </label>
+        <label class="field">
+          <span data-i18n="profile_new_password">Новый пароль</span>
+          <input type="password" id="profile-new-password" />
+        </label>
+        <button class="btn-ghost" id="profile-change-pw" data-i18n="profile_save_password">Сохранить пароль</button>
+        <div class="section-title" data-i18n="profile_export">Экспорт / импорт данных</div>
+        <div class="row-buttons">
+          <button class="btn-ghost" id="profile-export" data-i18n="export_data">Экспорт JSON</button>
+          <button class="btn-ghost" id="profile-import" data-i18n="import_data">Импорт</button>
+          <input type="file" id="profile-import-file" accept="application/json" hidden />
+        </div>
+        <div class="hint" id="profile-msg" style="display:none"></div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn-ghost" id="profile-logout" data-i18n="logout">Выйти</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: create event -->
+  <div class="modal-backdrop" id="add-backdrop" hidden>
+    <div class="modal">
+      <div class="modal-head">
+        <h3 data-i18n="create_event">Создать событие</h3>
+        <button class="btn-ghost" id="add-close">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="event-preview" id="event-preview">
+          <div class="event-preview-emoji" id="ep-emoji">🎯</div>
+          <div>
+            <div class="event-preview-title" id="ep-title" data-i18n="event_preview_title">Превью события</div>
+            <div class="event-preview-desc" id="ep-desc" data-i18n="event_preview_desc">Описание появится здесь</div>
+          </div>
+        </div>
+        <label class="field">
+          <span data-i18n="add_title">Заголовок</span>
+          <input type="text" id="add-title" maxlength="140" />
+        </label>
+        <label class="field">
+          <span data-i18n="add_desc">Описание</span>
+          <textarea id="add-desc" rows="2" maxlength="500"></textarea>
+        </label>
+        <div class="row-fields">
+          <label class="field">
+            <span data-i18n="add_emoji">Эмодзи</span>
+            <input type="text" id="add-emoji" value="🎯" maxlength="4" />
+          </label>
+          <label class="field">
+            <span data-i18n="add_color1">Цвет 1</span>
+            <input type="color" id="add-color1" value="#ff7a18" />
+          </label>
+          <label class="field">
+            <span data-i18n="add_color2">Цвет 2</span>
+            <input type="color" id="add-color2" value="#3a8dff" />
+          </label>
+        </div>
+        <div class="section-title" data-i18n="add_outcomes">Исходы (вероятности нормализуются)</div>
+        <div id="outcomes-list"></div>
+        <button class="btn-ghost" id="add-outcome-btn" data-i18n="add_outcome">+ Добавить исход</button>
+        <div class="hint" id="add-error" style="color:var(--red);display:none"></div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn-ghost" id="add-cancel" data-i18n="cancel">Отмена</button>
+        <button class="btn-primary" id="add-submit" data-i18n="save">Сохранить</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: bet result -->
+  <div class="modal-backdrop" id="resolve-backdrop" hidden>
+    <div class="modal modal-narrow">
+      <div class="modal-head">
+        <h3 id="resolve-title">—</h3>
+        <button class="btn-ghost" id="resolve-close">✕</button>
+      </div>
+      <div class="modal-body" id="resolve-body"></div>
+      <div class="modal-foot">
+        <button class="btn-primary" id="resolve-ok" data-i18n="ok">Ок</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: stream + chat -->
+  <div class="modal-backdrop" id="stream-backdrop" hidden>
+    <div class="modal modal-wide">
+      <div class="modal-head">
+        <h3 id="stream-title">—</h3>
+        <div>
+          <span class="live-indicator"><span class="dot"></span><span id="stream-viewers">0</span></span>
+          <button class="btn-ghost" id="stream-close">✕</button>
+        </div>
+      </div>
+      <div class="modal-body stream-body">
+        <div class="stream-video" id="stream-video">
+          <canvas id="stream-canvas" width="640" height="360"></canvas>
+          <iframe id="stream-iframe" hidden allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe>
+          <video id="stream-video-el" hidden controls playsinline preload="metadata"></video>
+        </div>
+        <div class="stream-controls" id="stream-controls">
+          <button class="btn-ghost" id="stream-set-url" data-i18n="stream_set_url">Указать URL</button>
+          <input type="file" id="stream-upload-file" accept="video/mp4,video/webm" hidden />
+          <button class="btn-ghost" id="stream-upload" data-i18n="stream_upload">📁 Загрузить mp4/webm</button>
+          <button class="btn-ghost" id="stream-stop" hidden data-i18n="stream_stop">Завершить трансляцию</button>
+        </div>
+        <div class="chat">
+          <div class="chat-messages" id="chat-messages"></div>
+          <div class="chat-input">
+            <input type="text" id="chat-text" maxlength="500" placeholder="..." />
+            <button class="btn-primary" id="chat-send" data-i18n="send">Отправить</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toasts -->
+  <div class="toasts" id="toasts"></div>
+  <div class="loader" id="loader" hidden><div class="spinner"></div></div>
+
+  <script src="i18n.js"></script>
+  <script src="api.js"></script>
+  <script src="app.js"></script>
+  <script>if ('serviceWorker' in navigator) { window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {})); }</script>
+</body>
+</html>

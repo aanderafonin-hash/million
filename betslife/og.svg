@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#fff7ef"/>
+      <stop offset="100%" stop-color="#ffe4cc"/>
+    </linearGradient>
+    <linearGradient id="tile" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ff8a3d"/>
+      <stop offset="100%" stop-color="#e15510"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <g opacity="0.08" fill="#ff6b1a">
+    <circle cx="100" cy="100" r="3"/><circle cx="300" cy="160" r="3"/><circle cx="500" cy="80" r="3"/>
+    <circle cx="900" cy="140" r="3"/><circle cx="1100" cy="80" r="3"/><circle cx="200" cy="400" r="3"/>
+    <circle cx="800" cy="480" r="3"/><circle cx="1050" cy="520" r="3"/><circle cx="400" cy="560" r="3"/>
+  </g>
+  <g transform="translate(90,160)">
+    <rect x="0" y="0" width="140" height="140" rx="28" fill="url(#tile)"/>
+    <g fill="#ffffff" transform="translate(40,40)">
+      <circle cx="10" cy="10" r="10"/><circle cx="50" cy="10" r="10"/>
+      <circle cx="30" cy="30" r="10"/>
+      <circle cx="10" cy="50" r="10"/><circle cx="50" cy="50" r="10"/>
+    </g>
+  </g>
+  <g font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Inter, Arial, sans-serif" fill="#0f172a">
+    <text x="90" y="380" font-size="96" font-weight="900">World<tspan fill="#ff6b1a">Pari</tspan></text>
+    <text x="90" y="440" font-size="38" font-weight="600" fill="#334155">Ставки на события мира</text>
+    <text x="90" y="500" font-size="26" fill="#64748b">🏛️ Политика · ₿ Крипта · ⚽ Спорт · 🤖 Технологии · 🎬 Культура</text>
+  </g>
+  <g transform="translate(820,200)">
+    <rect x="0" y="0" width="280" height="80" rx="20" fill="#10b981"/>
+    <text x="140" y="50" font-size="40" font-weight="800" fill="#ffffff" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, sans-serif">67%  Да</text>
+  </g>
+  <g transform="translate(820,300)">
+    <rect x="0" y="0" width="280" height="80" rx="20" fill="#ef4444"/>
+    <text x="140" y="50" font-size="40" font-weight="800" fill="#ffffff" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, sans-serif">33%  Нет</text>
+  </g>
+</svg>
