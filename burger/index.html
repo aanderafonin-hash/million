@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Бургер Башня</title>
-    <link rel="stylesheet" href="style.css?v=4">
+    <link rel="stylesheet" href="style.css?v=5">
 </head>
 <body>
     <canvas id="bg-canvas"></canvas>
@@ -14,10 +14,21 @@
             <h1 class="game-title">🍔 Бургер Башня</h1>
             <p class="subtitle">Собери самый высокий бургер!</p>
             <div id="start-best" class="start-best"></div>
+            <!-- Player level badge -->
+            <div id="start-level-badge" class="level-badge" style="display:none">
+                <div class="level-icon"></div>
+                <div class="level-info">
+                    <span class="level-title-text" id="start-level-title"></span>
+                    <div class="xp-bar-wrap"><div class="xp-bar" id="start-xp-bar"></div></div>
+                </div>
+            </div>
+            <!-- Streak badge -->
+            <div id="start-streak" class="streak-badge" style="display:none"></div>
             <div class="name-input-wrap">
                 <input type="text" id="player-name" placeholder="Введи своё имя" maxlength="20" autocomplete="off">
             </div>
             <button id="btn-play" class="btn btn-primary">Играть</button>
+            <button id="btn-quests" class="btn btn-secondary">📋 Задания</button>
             <button id="btn-leaderboard" class="btn btn-secondary">🏆 Рейтинг</button>
             <div class="how-to-play">
                 <b>Управление:</b> Тап / Клик / Пробел — сбросить ингредиент.<br>
@@ -32,6 +43,16 @@
             <h2>🏆 Рейтинг игроков</h2>
             <div id="leaderboard-list" class="leaderboard"></div>
             <button id="btn-back-start" class="btn btn-secondary">← Назад</button>
+        </div>
+    </div>
+
+    <!-- Quests Screen -->
+    <div id="screen-quests" class="screen">
+        <div class="screen-content">
+            <h2>📋 Ежедневные задания</h2>
+            <div id="quests-list" class="quests-list"></div>
+            <div id="streak-info" class="streak-info"></div>
+            <button id="btn-quests-back" class="btn btn-secondary">← Назад</button>
         </div>
     </div>
 
@@ -57,6 +78,16 @@
         </div>
     </div>
 
+    <!-- Second Life Overlay (rewarded ad) -->
+    <div id="second-life-overlay" class="overlay-modal" style="display:none">
+        <div class="overlay-content">
+            <h2>💔 Бургер развалился!</h2>
+            <p class="overlay-subtitle">Хочешь продолжить?</p>
+            <button id="btn-second-life" class="btn btn-reward">▶ Продолжить (реклама)</button>
+            <button id="btn-skip-life" class="btn btn-secondary">Нет, спасибо</button>
+        </div>
+    </div>
+
     <!-- Result Screen -->
     <div id="screen-result" class="screen">
         <div class="screen-content">
@@ -68,8 +99,13 @@
                 <div class="stat-row"><span>Идеальных:</span><span id="result-perfect">0</span></div>
                 <div class="stat-row"><span>Макс. комбо:</span><span id="result-combo">0</span></div>
             </div>
+            <!-- XP earned -->
+            <div id="result-xp" class="result-xp" style="display:none"></div>
+            <!-- Quest progress -->
+            <div id="result-quests" class="result-quests" style="display:none"></div>
             <div id="result-rank" class="result-rank"></div>
             <div id="result-best" class="result-best" style="display:none"></div>
+            <button id="btn-triple-score" class="btn btn-reward" style="display:none">x3 Очки (реклама)</button>
             <button id="btn-retry" class="btn btn-primary btn-retry-glow">🔄 Ещё раз!</button>
             <button id="btn-result-leaderboard" class="btn btn-secondary">🏆 Рейтинг</button>
             <button id="btn-result-menu" class="btn btn-secondary">Меню</button>
@@ -77,6 +113,6 @@
     </div>
 
     <script src="/sdk.js"></script>
-    <script src="game.js?v=4"></script>
+    <script src="game.js?v=5"></script>
 </body>
 </html>

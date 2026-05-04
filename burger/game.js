@@ -157,6 +157,252 @@ let floatingTexts = [];
 let juiceDrops = [];
 let bgPulse = 0;
 let frameCount = 0;
+let deathCount = parseInt(localStorage.getItem('burger_deaths') || '0');
+let usedSecondLife = false;
+let scoreTripled = false;
+
+// ─── Ad System ───
+function showRewardedAd(onSuccess, onFail) {
+    if (ysdk) {
+        try {
+            ysdk.adv.showRewardedVideo({
+                callbacks: {
+                    onOpen: () => { if (audioCtx) audioCtx.suspend(); speechSynthesis.cancel(); },
+                    onRewarded: () => { if (onSuccess) onSuccess(); },
+                    onClose: () => { if (!soundMuted && audioCtx) audioCtx.resume(); },
+                    onError: () => { if (onFail) onFail(); if (!soundMuted && audioCtx) audioCtx.resume(); }
+                }
+            });
+        } catch(e) { if (onSuccess) onSuccess(); }
+    } else {
+        if (onSuccess) onSuccess();
+    }
+}
+
+function showInterstitialAd(onComplete) {
+    if (ysdk) {
+        try {
+            ysdk.adv.showFullscreenAdv({
+                callbacks: {
+                    onOpen: () => { if (audioCtx) audioCtx.suspend(); speechSynthesis.cancel(); },
+                    onClose: (wasShown) => { if (!soundMuted && audioCtx) audioCtx.resume(); if (onComplete) onComplete(); },
+                    onError: () => { if (!soundMuted && audioCtx) audioCtx.resume(); if (onComplete) onComplete(); }
+                }
+            });
+        } catch(e) { if (onComplete) onComplete(); }
+    } else {
+        if (onComplete) onComplete();
+    }
+}
+
+// ─── XP / Level System ───
+const LEVEL_TITLES = [
+    { minLvl: 0, title: 'Новичок', icon: '🍳' },
+    { minLvl: 3, title: 'Стажёр', icon: '👨‍🍳' },
+    { minLvl: 6, title: 'Повар', icon: '🔪' },
+    { minLvl: 10, title: 'Шеф-повар', icon: '👨‍🍳' },
+    { minLvl: 15, title: 'Су-шеф', icon: '⭐' },
+    { minLvl: 20, title: 'Мастер бургеров', icon: '🏆' },
+    { minLvl: 30, title: 'Гуру кухни', icon: '👑' },
+    { minLvl: 40, title: 'Легенда', icon: '🌟' },
+    { minLvl: 50, title: 'Бог бургеров', icon: '💎' },
+];
+
+function getXPForLevel(lvl) { return 100 + lvl * 50; }
+
+function loadPlayerProgress() {
+    try {
+        return JSON.parse(localStorage.getItem('burger_progress') || '{}');
+    } catch { return {}; }
+}
+
+function savePlayerProgress(data) {
+    localStorage.setItem('burger_progress', JSON.stringify(data));
+}
+
+function getPlayerLevel() {
+    const p = loadPlayerProgress();
+    return { level: p.level || 0, xp: p.xp || 0, totalXP: p.totalXP || 0 };
+}
+
+function addXP(amount) {
+    const p = loadPlayerProgress();
+    let lvl = p.level || 0;
+    let xp = (p.xp || 0) + amount;
+    let totalXP = (p.totalXP || 0) + amount;
+    let leveledUp = false;
+    while (xp >= getXPForLevel(lvl)) {
+        xp -= getXPForLevel(lvl);
+        lvl++;
+        leveledUp = true;
+    }
+    savePlayerProgress({ ...p, level: lvl, xp, totalXP });
+    return { level: lvl, xp, totalXP, leveledUp };
+}
+
+function getLevelTitle(lvl) {
+    let t = LEVEL_TITLES[0];
+    for (const lt of LEVEL_TITLES) { if (lvl >= lt.minLvl) t = lt; }
+    return t;
+}
+
+function updateLevelBadge() {
+    const pl = getPlayerLevel();
+    const t = getLevelTitle(pl.level);
+    const badge = document.getElementById('start-level-badge');
+    const titleEl = document.getElementById('start-level-title');
+    const xpBar = document.getElementById('start-xp-bar');
+    if (badge) {
+        badge.style.display = 'flex';
+        badge.querySelector('.level-icon').textContent = t.icon;
+        titleEl.textContent = `Ур. ${pl.level} — ${t.title}`;
+        const needed = getXPForLevel(pl.level);
+        xpBar.style.width = Math.min(100, (pl.xp / needed) * 100) + '%';
+    }
+}
+
+// ─── Streak System ───
+function getStreak() {
+    try {
+        const data = JSON.parse(localStorage.getItem('burger_streak') || '{}');
+        return { count: data.count || 0, lastDate: data.lastDate || '' };
+    } catch { return { count: 0, lastDate: '' }; }
+}
+
+function updateStreak() {
+    const today = new Date().toISOString().slice(0, 10);
+    const s = getStreak();
+    if (s.lastDate === today) return s;
+    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+    let newCount = (s.lastDate === yesterday) ? s.count + 1 : 1;
+    const data = { count: newCount, lastDate: today };
+    localStorage.setItem('burger_streak', JSON.stringify(data));
+    return data;
+}
+
+function displayStreak() {
+    const s = getStreak();
+    const el = document.getElementById('start-streak');
+    if (el && s.count > 0) {
+        el.style.display = '';
+        const flames = '🔥'.repeat(Math.min(s.count, 7));
+        const bonus = s.count >= 7 ? ' (+50% XP!)' : s.count >= 3 ? ' (+25% XP!)' : '';
+        el.textContent = `${flames} ${s.count} ${s.count === 1 ? 'день' : s.count < 5 ? 'дня' : 'дней'} подряд${bonus}`;
+    }
+}
+
+function getStreakMultiplier() {
+    const s = getStreak();
+    if (s.count >= 7) return 1.5;
+    if (s.count >= 3) return 1.25;
+    return 1;
+}
+
+// ─── Daily Quests System ───
+const QUEST_TEMPLATES = [
+    { id: 'score_500', title: 'Набери 500 очков', icon: '🎯', target: 500, stat: 'score', reward: 50 },
+    { id: 'score_1000', title: 'Набери 1000 очков', icon: '🎯', target: 1000, stat: 'score', reward: 100 },
+    { id: 'perfect_3', title: 'Сделай 3 идеальных попадания', icon: '✨', target: 3, stat: 'perfects', reward: 40 },
+    { id: 'perfect_10', title: 'Сделай 10 идеальных попаданий', icon: '✨', target: 10, stat: 'perfects', reward: 80 },
+    { id: 'floors_10', title: 'Построй 10 этажей', icon: '🏗️', target: 10, stat: 'floors', reward: 40 },
+    { id: 'floors_20', title: 'Построй 20 этажей', icon: '🏢', target: 20, stat: 'floors', reward: 80 },
+    { id: 'fever_1', title: 'Активируй Fever Mode', icon: '🔥', target: 1, stat: 'fevers', reward: 60 },
+    { id: 'fever_3', title: 'Активируй Fever Mode 3 раза', icon: '🔥', target: 3, stat: 'fevers', reward: 120 },
+    { id: 'combo_5', title: 'Достигни комбо x5', icon: '💥', target: 5, stat: 'maxCombo', reward: 50 },
+    { id: 'combo_10', title: 'Достигни комбо x10', icon: '💥', target: 10, stat: 'maxCombo', reward: 100 },
+    { id: 'golden_1', title: 'Поймай золотой ингредиент', icon: '⭐', target: 1, stat: 'goldens', reward: 60 },
+    { id: 'games_3', title: 'Сыграй 3 раза', icon: '🎮', target: 3, stat: 'games', reward: 30 },
+    { id: 'games_5', title: 'Сыграй 5 раз', icon: '🎮', target: 5, stat: 'games', reward: 60 },
+];
+
+function getTodayKey() { return new Date().toISOString().slice(0, 10); }
+
+function loadQuests() {
+    try {
+        const data = JSON.parse(localStorage.getItem('burger_quests') || '{}');
+        if (data.date !== getTodayKey()) return generateDailyQuests();
+        return data;
+    } catch { return generateDailyQuests(); }
+}
+
+function generateDailyQuests() {
+    const shuffled = [...QUEST_TEMPLATES].sort(() => Math.random() - 0.5);
+    const picked = shuffled.slice(0, 3);
+    const data = {
+        date: getTodayKey(),
+        quests: picked.map(q => ({ ...q, progress: 0, claimed: false })),
+        sessionStats: { score: 0, perfects: 0, floors: 0, fevers: 0, maxCombo: 0, goldens: 0, games: 0 }
+    };
+    localStorage.setItem('burger_quests', JSON.stringify(data));
+    return data;
+}
+
+function saveQuests(data) {
+    localStorage.setItem('burger_quests', JSON.stringify(data));
+}
+
+function updateQuestProgress(stats) {
+    const data = loadQuests();
+    const ss = data.sessionStats;
+    ss.score = Math.max(ss.score, stats.score || 0);
+    ss.perfects += stats.perfects || 0;
+    ss.floors += stats.floors || 0;
+    ss.fevers += stats.fevers || 0;
+    ss.maxCombo = Math.max(ss.maxCombo, stats.maxCombo || 0);
+    ss.goldens += stats.goldens || 0;
+    ss.games += stats.games || 0;
+
+    let completed = [];
+    for (const q of data.quests) {
+        if (q.claimed) continue;
+        let val = 0;
+        if (q.stat === 'score') val = ss.score;
+        else if (q.stat === 'perfects') val = ss.perfects;
+        else if (q.stat === 'floors') val = ss.floors;
+        else if (q.stat === 'fevers') val = ss.fevers;
+        else if (q.stat === 'maxCombo') val = ss.maxCombo;
+        else if (q.stat === 'goldens') val = ss.goldens;
+        else if (q.stat === 'games') val = ss.games;
+        q.progress = Math.min(val, q.target);
+        if (q.progress >= q.target && !q.claimed) {
+            q.claimed = true;
+            completed.push(q);
+            addXP(q.reward);
+        }
+    }
+    saveQuests(data);
+    return completed;
+}
+
+function renderQuestsScreen() {
+    const data = loadQuests();
+    const el = document.getElementById('quests-list');
+    el.innerHTML = data.quests.map(q => {
+        const pct = Math.min(100, (q.progress / q.target) * 100);
+        const done = q.claimed;
+        return `<div class="quest-item${done ? ' completed' : ''}">
+            <div class="quest-icon">${done ? '✅' : q.icon}</div>
+            <div class="quest-info">
+                <div class="quest-title">${q.title}</div>
+                <div class="quest-progress">${q.progress}/${q.target}</div>
+                <div class="quest-progress-bar"><div class="quest-progress-fill" style="width:${pct}%"></div></div>
+            </div>
+            <div class="quest-reward">${done ? 'Получено' : '+' + q.reward + ' XP'}</div>
+        </div>`;
+    }).join('');
+
+    const streakEl = document.getElementById('streak-info');
+    const s = getStreak();
+    if (streakEl) {
+        const flames = '🔥'.repeat(Math.min(s.count, 7));
+        const mul = getStreakMultiplier();
+        streakEl.innerHTML = `<b>${flames} Серия: ${s.count} ${s.count === 1 ? 'день' : s.count < 5 ? 'дня' : 'дней'}</b><br>` +
+            (mul > 1 ? `Бонус XP: x${mul}` : 'Играй каждый день для бонуса XP!');
+    }
+}
+
+// Track stats for current game session
+let sessionFevers = 0, sessionGoldens = 0;
 
 // ─── Background visual system ───
 const bgStars = [];
@@ -263,6 +509,7 @@ resize();
 const screens = {
     start: document.getElementById('screen-start'),
     leaderboard: document.getElementById('screen-leaderboard'),
+    quests: document.getElementById('screen-quests'),
     game: document.getElementById('screen-game'),
     result: document.getElementById('screen-result'),
 };
@@ -1056,8 +1303,11 @@ function startGame() {
     floatingTexts = []; juiceDrops = []; shakeIntensity = 0;
     bgPulse = 0; frameCount = 0;
     impactRings = []; dropTrail = []; ambientParticles.length = 0;
+    usedSecondLife = false; scoreTripled = false;
+    sessionFevers = 0; sessionGoldens = 0;
     initBGEffects();
     gamePaused = false; pauseOverlay.classList.remove('active');
+    document.getElementById('second-life-overlay').style.display = 'none';
     showScreen('game');
     resize();
     // GameplayAPI start (1.19.3)
@@ -1106,6 +1356,8 @@ function landIng() {
 
     const goldenMul = wasGolden ? 3 : 1;
 
+    if (wasGolden) sessionGoldens++;
+
     if (absOff <= PERFECT_TH) {
         combo++; if (combo > maxCombo) maxCombo = combo; perfectCount++;
         const pts = (BASE_PTS + combo * COMBO_MUL + level * 10) * goldenMul;
@@ -1126,6 +1378,7 @@ function landIng() {
         // Fever activation
         if (combo >= FEVER_COMBO && !fever) {
             fever = true; feverTimer = 0;
+            sessionFevers++;
             playFeverSound();
             showPraise(FEVER_PRAISES[Math.floor(Math.random() * FEVER_PRAISES.length)], '#FF4500');
             spawnFireBurst(px, screenY);
@@ -1198,13 +1451,58 @@ function startCollapse() {
             vx: (Math.random() - 0.5) * 8 + (cumulativeLean > 0 ? 2 : -2),
             vy: -Math.random() * 4 - 1, va: (Math.random() - 0.5) * 0.2, a: 0 });
     }
-    setTimeout(() => { playGameOverSound(); setTimeout(() => { if (!resultShown) showResult(); }, 1000); }, 1200);
+    setTimeout(() => {
+        playGameOverSound();
+        setTimeout(() => {
+            if (resultShown) return;
+            if (!usedSecondLife && level >= 3) {
+                showSecondLifeOffer();
+            } else {
+                showResult();
+            }
+        }, 1000);
+    }, 1200);
+}
+
+function showSecondLifeOffer() {
+    gameState = 'secondlife';
+    document.getElementById('second-life-overlay').style.display = 'flex';
+}
+
+function useSecondLife() {
+    usedSecondLife = true;
+    document.getElementById('second-life-overlay').style.display = 'none';
+    showRewardedAd(() => {
+        // Restore game — rebuild stack from bottom bun + a few layers
+        colPieces = [];
+        cumulativeLean *= 0.3;
+        swayAngle = 0; swayVel = 0;
+        // Keep only bottom bun + last 3 layers
+        if (stack.length > 4) stack.length = 4;
+        gameState = 'playing';
+        if (ysdk) try { ysdk.features.GameplayAPI.start(); } catch(e) {}
+        spawnIng();
+        showPraise('Второй шанс! 💪', '#A855F7');
+        playPerfectSound();
+    }, () => {
+        showResult();
+    });
+}
+
+function skipSecondLife() {
+    document.getElementById('second-life-overlay').style.display = 'none';
+    showResult();
 }
 
 function showResult() {
     if (resultShown) return; resultShown = true; gameState = 'gameover';
     // GameplayAPI stop (1.19.3)
     if (ysdk) try { ysdk.features.GameplayAPI.stop(); } catch(e) {}
+
+    // Track death for interstitial ads
+    deathCount++;
+    localStorage.setItem('burger_deaths', String(deathCount));
+
     // Save personal best
     if (score > personalBest) {
         personalBest = score;
@@ -1214,6 +1512,19 @@ function showResult() {
         bestFloors = level;
         localStorage.setItem('burger_bf', String(level));
     }
+
+    // XP reward based on performance
+    const streakMul = getStreakMultiplier();
+    const baseXP = Math.floor(level * 5 + perfectCount * 3 + Math.floor(score / 50));
+    const xpEarned = Math.floor(baseXP * streakMul);
+    const xpResult = addXP(xpEarned);
+
+    // Update quest progress
+    const completedQuests = updateQuestProgress({
+        score, perfects: perfectCount, floors: level,
+        fevers: sessionFevers, maxCombo, goldens: sessionGoldens, games: 1
+    });
+
     const lb = saveLB(playerName, score, level);
     document.getElementById('result-score').textContent = score;
     document.getElementById('result-levels').textContent = level;
@@ -1233,9 +1544,41 @@ function showResult() {
         bestEl.style.display = '';
     }
 
+    // XP display
+    const xpEl = document.getElementById('result-xp');
+    if (xpEl) {
+        const t = getLevelTitle(xpResult.level);
+        const lvlUpText = xpResult.leveledUp ? ` 🎉 Новый уровень! ${t.icon} ${t.title}` : '';
+        xpEl.textContent = `+${xpEarned} XP${streakMul > 1 ? ' (x' + streakMul + ' серия!)' : ''}${lvlUpText}`;
+        xpEl.style.display = '';
+    }
+
+    // Quest completion notifications
+    const questsEl = document.getElementById('result-quests');
+    if (questsEl && completedQuests.length > 0) {
+        questsEl.innerHTML = completedQuests.map(q =>
+            `<div class="result-quest-done">✅ ${q.title} — +${q.reward} XP</div>`
+        ).join('');
+        questsEl.style.display = '';
+    } else if (questsEl) {
+        questsEl.style.display = 'none';
+    }
+
+    // Triple score button (only if score > 50 and not yet tripled)
+    const tripleBtn = document.getElementById('btn-triple-score');
+    if (tripleBtn) {
+        tripleBtn.style.display = (score >= 50 && !scoreTripled) ? '' : 'none';
+    }
+
     document.getElementById('result-title').textContent =
         Math.abs(cumulativeLean) >= MAX_LEAN ? '💥 Бургер развалился!' : '🍔 Отличный бургер!';
-    showScreen('result');
+
+    // Show interstitial every 3rd death
+    if (deathCount % 3 === 0) {
+        showInterstitialAd(() => showScreen('result'));
+    } else {
+        showScreen('result');
+    }
 }
 
 // ─── Dog mechanic ───
@@ -1565,7 +1908,32 @@ document.getElementById('btn-leaderboard').addEventListener('click', () => { ren
 document.getElementById('btn-back-start').addEventListener('click', () => showScreen('start'));
 document.getElementById('btn-retry').addEventListener('click', () => startGame());
 document.getElementById('btn-result-leaderboard').addEventListener('click', () => { renderLB(score); showScreen('leaderboard'); });
-document.getElementById('btn-result-menu').addEventListener('click', () => showScreen('start'));
+document.getElementById('btn-result-menu').addEventListener('click', () => { updateLevelBadge(); displayStreak(); showScreen('start'); });
+
+// ─── Second Life + Triple Score buttons ───
+document.getElementById('btn-second-life').addEventListener('click', () => useSecondLife());
+document.getElementById('btn-skip-life').addEventListener('click', () => skipSecondLife());
+document.getElementById('btn-triple-score').addEventListener('click', () => {
+    showRewardedAd(() => {
+        scoreTripled = true;
+        const oldScore = score;
+        score *= 3;
+        // Update leaderboard with tripled score
+        if (score > personalBest) {
+            personalBest = score;
+            localStorage.setItem('burger_pb', String(score));
+        }
+        saveLB(playerName, score, level);
+        document.getElementById('result-score').textContent = score;
+        document.getElementById('btn-triple-score').style.display = 'none';
+        const bestEl = document.getElementById('result-best');
+        if (bestEl) bestEl.textContent = `Лучший результат: ${personalBest} очков, ${bestFloors} этажей`;
+    });
+});
+
+// ─── Quests Screen ───
+document.getElementById('btn-quests').addEventListener('click', () => { renderQuestsScreen(); showScreen('quests'); });
+document.getElementById('btn-quests-back').addEventListener('click', () => showScreen('start'));
 
 // ─── Yandex Games SDK ───
 let ysdk = null;
@@ -1589,6 +1957,11 @@ const startBestEl = document.getElementById('start-best');
 if (startBestEl && personalBest > 0) {
     startBestEl.textContent = `Твой рекорд: ${personalBest} очков, ${bestFloors} этажей`;
 }
+// Initialize engagement systems
+updateStreak();
+updateLevelBadge();
+displayStreak();
+loadQuests();
 showScreen('start'); loop(); initSDK();
 
 // ─── Animated menu background ───
