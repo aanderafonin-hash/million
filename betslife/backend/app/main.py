@@ -17,6 +17,7 @@ from .routers.bets_router import router as bets_router
 from .routers.chat_router import router as chat_router
 from .routers.events_router import router as events_router
 from .routers.payments_router import router as payments_router
+from .routers.social_router import router as social_router
 from .routers.streams_router import router as streams_router
 from .routers.uploads_router import router as uploads_router
 from .services.resolver import background_loop
@@ -62,6 +63,7 @@ app.include_router(streams_router)
 app.include_router(chat_router)
 app.include_router(uploads_router)
 app.include_router(admin_router)
+app.include_router(social_router)
 
 # Static uploads (avatars, stream media)
 os.makedirs(settings.uploads_dir, exist_ok=True)

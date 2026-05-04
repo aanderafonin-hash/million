@@ -5,9 +5,35 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <meta name="theme-color" content="#ffffff" />
 <script>(function(){try{var t=localStorage.getItem('worldpari.theme')||'light';document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
-<title>WorldPari — ставки на жизнь</title>
+
+<title>WorldPari — ставки на события мира</title>
+<meta name="description" content="WorldPari — площадка предсказательных рынков. Ставь на политику, крипту, спорт, технологии, поп-культуру и погоду. Большие и малые события со всего мира, прозрачные вероятности и моментальные коэффициенты." />
+<meta name="keywords" content="ставки, предсказательный рынок, prediction market, politics, crypto, events, вероятности, worldpari" />
+<meta name="author" content="WorldPari" />
+<link rel="canonical" href="https://worldpari.com/" />
+<link rel="alternate" hreflang="ru" href="https://worldpari.ru/" />
+<link rel="alternate" hreflang="en" href="https://worldpari.com/" />
+
+<!-- Open Graph -->
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="WorldPari" />
+<meta property="og:title" content="WorldPari — ставки на события мира" />
+<meta property="og:description" content="Предсказательные рынки: политика, крипта, спорт, технологии. Сотни событий со всего мира, большие % и моментальные коэффициенты." />
+<meta property="og:url" content="https://worldpari.com/" />
+<meta property="og:image" content="https://worldpari.com/og.svg" />
+<meta property="og:locale" content="ru_RU" />
+<meta property="og:locale:alternate" content="en_US" />
+
+<!-- Twitter -->
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="WorldPari — ставки на события мира" />
+<meta name="twitter:description" content="Предсказательные рынки: политика, крипта, спорт, технологии. Сотни событий со всего мира." />
+<meta name="twitter:image" content="https://worldpari.com/og.svg" />
+
 <link rel="stylesheet" href="style.css" />
-<link rel="icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><text y='50' font-size='52'>🎲</text></svg>" />
+<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+<link rel="apple-touch-icon" href="/favicon.svg" />
+<link rel="manifest" href="/manifest.webmanifest" />
 </head>
 <body>
   <div class="virtual-banner" id="virtual-banner" data-i18n="virtual_money_disclaimer">⚠ Все деньги на WorldPari виртуальные. Это не реальный букмекер.</div>
@@ -29,6 +55,7 @@
       <button class="tab" data-cat="life" data-i18n-html="🎭 {tab_life}"></button>
       <button class="tab" data-cat="community" data-i18n-html="👥 {tab_community}"></button>
       <button class="tab" data-cat="streams" data-i18n-html="🔴 {tab_streams}"></button>
+      <button class="tab" data-cat="leaderboard" data-i18n-html="🏆 {tab_leaderboard}"></button>
       <button class="tab" data-cat="mine" data-i18n-html="🧑‍🎨 {tab_mine}"></button>
       <button class="tab" data-cat="history" data-i18n-html="📜 {tab_history}"></button>
     </nav>
@@ -49,6 +76,40 @@
 
   <main class="layout">
     <section class="events" id="events">
+      <!-- Hero: landing block shown only for logged-out users on the "all" tab.
+           The app.js handles showing/hiding dynamically. -->
+      <div class="hero" id="hero" hidden>
+        <div class="hero-main">
+          <h1 class="hero-title">Ставь на <span class="accent">события мира</span></h1>
+          <p class="hero-sub">Политика, крипта, спорт, технологии, культура — <b>сотни прогнозов</b> со всего мира. Вероятность в процентах, моментальный выигрыш, всё на виртуальные ₽.</p>
+          <div class="hero-steps">
+            <div class="hero-step"><span class="hero-step-num">1</span><div><b>Выбери событие</b><span>Любая категория — мы обновляем каждый день</span></div></div>
+            <div class="hero-step"><span class="hero-step-num">2</span><div><b>Поставь ₽</b><span>Да или нет — по одной кнопке</span></div></div>
+            <div class="hero-step"><span class="hero-step-num">3</span><div><b>Получи выигрыш</b><span>Резолв автоматом по источнику</span></div></div>
+          </div>
+          <div class="hero-cta">
+            <button class="btn-primary" id="hero-cta-register">Начать бесплатно</button>
+            <button class="btn-ghost" id="hero-cta-scroll">↓ Смотреть события</button>
+          </div>
+        </div>
+        <aside class="hero-stats" aria-label="Stats">
+          <div class="hero-stat"><b id="hs-events">60+</b><span>рынков</span></div>
+          <div class="hero-stat"><b id="hs-categories">8</b><span>категорий</span></div>
+          <div class="hero-stat"><b id="hs-users">∞</b><span>предсказателей</span></div>
+        </aside>
+      </div>
+
+      <!-- Toolbar: shown on list tabs (all/politics/...) — controls sort. -->
+      <div class="feed-toolbar" id="feed-toolbar" hidden>
+        <span class="feed-title" id="feed-title" data-i18n="feed_all">Все события</span>
+        <div class="segmented" role="tablist" aria-label="Sort">
+          <button class="seg active" data-sort="trending" data-i18n="sort_trending">🔥 Популярные</button>
+          <button class="seg" data-sort="ending" data-i18n="sort_ending">⏱ Скоро конец</button>
+          <button class="seg" data-sort="new" data-i18n="sort_new">✨ Новые</button>
+          <button class="seg" data-sort="volume" data-i18n="sort_volume">💸 Объём</button>
+        </div>
+      </div>
+
       <div class="empty-hint" id="empty-hint" hidden>
         <div class="emoji" style="font-size:48px;line-height:1">🎲</div>
         <div class="title" data-i18n="empty_events">Пока нет событий в этой категории.</div>
@@ -76,6 +137,23 @@
       </div>
     </aside>
   </main>
+
+  <footer class="site-footer">
+    <div class="site-footer-inner">
+      <div class="site-footer-brand">
+        <span class="logo-mark">🎲</span>
+        <span>World<span class="accent">Pari</span></span>
+      </div>
+      <nav class="site-footer-links">
+        <a href="/about.html" data-i18n="footer_about">О проекте</a>
+        <a href="/faq.html" data-i18n="footer_faq">FAQ</a>
+        <a href="/rules.html" data-i18n="footer_rules">Правила</a>
+        <a href="/terms.html" data-i18n="footer_terms">Условия</a>
+        <a href="/privacy.html" data-i18n="footer_privacy">Приватность</a>
+      </nav>
+      <div class="site-footer-meta">© 2026 WorldPari · <span data-i18n="footer_virtual">Все деньги виртуальные.</span></div>
+    </div>
+  </footer>
 
   <button class="fab" id="add-event-btn" title="Создать событие" data-i18n="add_event">+ Создать событие</button>
 
@@ -157,6 +235,42 @@
       <div class="modal-foot">
         <button class="btn-primary" id="recovery-shown-ok" data-i18n="recovery_save_ok">Я сохранил код</button>
       </div>
+    </div>
+  </div>
+
+  <!-- Modal: daily bonus -->
+  <div class="modal-backdrop" id="bonus-backdrop" hidden>
+    <div class="modal modal-narrow">
+      <div class="modal-head">
+        <h3 data-i18n="bonus_title">Ежедневный бонус</h3>
+        <button class="btn-ghost" id="bonus-close">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="bonus-hero">
+          <div class="bonus-coin">🪙</div>
+          <div class="bonus-amount" id="bonus-amount">+50 ₽</div>
+          <div class="bonus-streak" id="bonus-streak" data-i18n="bonus_day">День 1</div>
+        </div>
+        <div class="bonus-days" id="bonus-days"></div>
+        <div class="hint" id="bonus-hint"></div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn-primary" id="bonus-claim" data-i18n="bonus_claim">Забрать</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: event detail -->
+  <div class="modal-backdrop" id="event-detail-backdrop" hidden>
+    <div class="modal modal-wide">
+      <div class="modal-head">
+        <h3 id="ed-title">—</h3>
+        <div>
+          <button class="btn-ghost" id="ed-share" title="Share">🔗</button>
+          <button class="btn-ghost" id="ed-close">✕</button>
+        </div>
+      </div>
+      <div class="modal-body" id="ed-body"></div>
     </div>
   </div>
 
@@ -351,5 +465,6 @@
   <script src="i18n.js"></script>
   <script src="api.js"></script>
   <script src="app.js"></script>
+  <script>if ('serviceWorker' in navigator) { window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {})); }</script>
 </body>
 </html>

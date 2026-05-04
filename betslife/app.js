@@ -18,6 +18,8 @@
     activeStream: { eventId: null, ws: null, ownerId: null, viewers: 0 },
     chatMessages: [],
     historyFilter: 'all',  // all|won|lost|pending
+    sort: 'trending',      // trending|ending|new|volume
+    leaderboardPeriod: 'all', // week|month|all
     avatarPalette: ['🦊','🐱','🐶','🐼','🐯','🦁','🐸','🐧','🐙','🦄','🐰','🐢','🐉','🦅','🦋','🐝','🐞','👽','🤖','👻','🎃','🧙','🧛','🧜','🧝','🦸','🦹','🥷','🧞','🧚','🐲','🦖'],
     confettiTimer: null,
   };
@@ -346,7 +348,15 @@
   function renderEvents() {
     const container = $('#events');
     const empty = $('#empty-hint');
-    container.querySelectorAll('.event-card').forEach(n => n.remove());
+    // remove dynamic children (cards, leaderboard view, history view) while keeping hero + toolbar
+    container.querySelectorAll('.event-card, .lb-wrap, .history-wrap').forEach(n => n.remove());
+    renderHero();
+    renderFeedToolbar();
+    if (state.category === 'leaderboard') {
+      renderLeaderboardView(container);
+      empty.hidden = true;
+      return;
+    }
     let visible = state.events;
     if (state.category === 'streams') visible = visible.filter(e => e.is_live);
     if (state.category === 'community') visible = visible.filter(e => e.source === 'user');
@@ -361,10 +371,183 @@
     }
     // Main feed: hide community (user-created) markets unless explicitly browsing them.
     if (state.category === 'all') visible = visible.filter(e => e.source !== 'user');
-    visible.sort((a, b) => (b.is_live - a.is_live) || 0);
+    visible = sortEvents(visible, state.sort);
     if (visible.length === 0) { empty.hidden = false; return; }
     empty.hidden = true;
     visible.forEach(ev => container.appendChild(buildEventCard(ev)));
+  }
+
+  function sortEvents(list, key) {
+    const arr = list.slice();
+    const now = Date.now();
+    const end = (e) => e.resolves_at ? new Date(e.resolves_at).getTime() : (8.64e15);
+    const vol = (e) => (typeof e.volume === 'number' ? e.volume : 0);
+    const created = (e) => e.created_at ? new Date(e.created_at).getTime() : 0;
+    if (key === 'ending') {
+      arr.sort((a, b) => {
+        const da = end(a) - now, db = end(b) - now;
+        // put past deadlines at bottom
+        const pa = da < 0 ? 1 : 0, pb = db < 0 ? 1 : 0;
+        if (pa !== pb) return pa - pb;
+        return end(a) - end(b);
+      });
+    } else if (key === 'new') {
+      arr.sort((a, b) => created(b) - created(a));
+    } else if (key === 'volume') {
+      arr.sort((a, b) => vol(b) - vol(a));
+    } else {
+      // trending: blend volume + live + upcoming-soon
+      arr.sort((a, b) => {
+        const la = a.is_live ? 1 : 0, lb = b.is_live ? 1 : 0;
+        if (la !== lb) return lb - la;
+        const scoreA = vol(a) + (end(a) > now ? 10000 / Math.max(1, (end(a) - now) / 86400000) : 0);
+        const scoreB = vol(b) + (end(b) > now ? 10000 / Math.max(1, (end(b) - now) / 86400000) : 0);
+        return scoreB - scoreA;
+      });
+    }
+    return arr;
+  }
+
+  // Show hero only for logged-out users on the "all" tab.
+  function renderHero() {
+    const hero = $('#hero');
+    if (!hero) return;
+    const show = !state.user && state.category === 'all' && !state.search;
+    hero.hidden = !show;
+    if (show) {
+      const ne = $('#hs-events'); if (ne) ne.textContent = String((state.events || []).length || '60+');
+      const cats = new Set();
+      (state.events || []).forEach(e => cats.add(e.category));
+      const nc = $('#hs-categories'); if (nc) nc.textContent = String(cats.size || '8');
+    }
+  }
+
+  // Feed toolbar: shown on list tabs (market feeds), hidden on history/leaderboard/mine (if empty).
+  function renderFeedToolbar() {
+    const bar = $('#feed-toolbar');
+    if (!bar) return;
+    const listTabs = ['all','politics','crypto','sport','tech','culture','weather','life','community','streams'];
+    bar.hidden = !listTabs.includes(state.category);
+    if (!bar.hidden) {
+      const key = 'feed_' + state.category;
+      const ft = $('#feed-title');
+      if (ft) ft.textContent = T(key) || T('feed_all');
+      $$('#feed-toolbar .seg').forEach(b => b.classList.toggle('active', b.dataset.sort === state.sort));
+    }
+  }
+
+  // ---------- Leaderboard view ----------
+  async function renderLeaderboardView(container) {
+    const wrap = document.createElement('div'); wrap.className = 'lb-wrap';
+    const head = document.createElement('div'); head.className = 'lb-head';
+    const h2 = document.createElement('h2'); h2.textContent = '🏆 ' + T('feed_leaderboard');
+    head.appendChild(h2);
+    const seg = document.createElement('div'); seg.className = 'segmented';
+    [['week', T('lb_period_week')], ['month', T('lb_period_month')], ['all', T('lb_period_all')]].forEach(([k, l]) => {
+      const b = document.createElement('button');
+      b.className = 'seg' + (state.leaderboardPeriod === k ? ' active' : '');
+      b.textContent = l;
+      b.addEventListener('click', () => { state.leaderboardPeriod = k; renderEvents(); });
+      seg.appendChild(b);
+    });
+    head.appendChild(seg);
+    wrap.appendChild(head);
+
+    const list = document.createElement('div'); list.className = 'lb-list';
+    wrap.appendChild(list);
+    container.appendChild(wrap);
+
+    list.innerHTML = '<div class="empty-hint visible"><div class="hint">⏳</div></div>';
+    let data;
+    try { data = await API.leaderboard(state.leaderboardPeriod, 20); }
+    catch (e) { list.innerHTML = '<div class="empty-hint visible"><div class="title">' + T('lb_empty') + '</div></div>'; return; }
+    list.innerHTML = '';
+    if (!data.entries || !data.entries.length) {
+      list.innerHTML = '<div class="empty-hint visible"><div class="title">' + T('lb_empty') + '</div></div>';
+      return;
+    }
+    data.entries.forEach((e, idx) => {
+      const row = document.createElement('div');
+      const rank = idx + 1;
+      row.className = 'lb-row' + (rank <= 3 ? ' top-' + rank : '');
+      const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : '#' + rank;
+      const avatarEl = document.createElement('div');
+      avatarEl.className = 'lb-avatar';
+      if (e.avatar_url) { avatarEl.style.backgroundImage = 'url(' + API.mediaUrl(e.avatar_url) + ')'; }
+      else { avatarEl.textContent = e.avatar || '🦊'; }
+      const user = document.createElement('div'); user.className = 'lb-user';
+      user.innerHTML = '<b>' + escapeHTML(e.username) + '</b><span>' + T('lb_bets', { n: e.bets_count }) + '</span>';
+      const profitEl = document.createElement('div');
+      profitEl.className = 'lb-profit ' + (e.profit >= 0 ? 'pos' : 'neg');
+      profitEl.textContent = (e.profit >= 0 ? '+' : '') + fmt(e.profit);
+      const rateEl = document.createElement('div');
+      rateEl.className = 'lb-rate';
+      rateEl.textContent = T('lb_win_rate', { r: e.win_rate });
+      const rankEl = document.createElement('div'); rankEl.className = 'lb-rank'; rankEl.textContent = medal;
+      row.appendChild(rankEl); row.appendChild(avatarEl); row.appendChild(user); row.appendChild(profitEl); row.appendChild(rateEl);
+      list.appendChild(row);
+    });
+  }
+
+  function escapeHTML(s) {
+    return String(s || '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+  }
+
+  // ---------- Daily bonus ----------
+  async function checkDailyBonus() {
+    if (!state.user) return;
+    try {
+      const st = await API.bonusStatus();
+      if (st.can_claim) showBonusModal(st);
+    } catch (e) { /* ignore */ }
+  }
+
+  function showBonusModal(st) {
+    const back = $('#bonus-backdrop');
+    if (!back) return;
+    $('#bonus-amount').textContent = '+' + fmt(st.today_bonus);
+    const streak = st.streak || 0;
+    const upcoming = (streak + 1);
+    $('#bonus-streak').textContent = T('bonus_day', { n: upcoming });
+    const days = $('#bonus-days');
+    if (days) {
+      days.innerHTML = '';
+      for (let i = 1; i <= 7; i++) {
+        const d = document.createElement('div');
+        d.className = 'bonus-day' + (i < upcoming ? ' claimed' : i === upcoming ? ' today' : '');
+        d.textContent = 'D' + i;
+        days.appendChild(d);
+      }
+    }
+    $('#bonus-hint').textContent = T('bonus_streak_hint');
+    $('#bonus-claim').hidden = !st.can_claim;
+    back.hidden = false;
+  }
+
+  async function claimBonus() {
+    try {
+      const r = await API.bonusClaim();
+      if (state.user) { state.user.balance = r.new_balance; renderAuthBlock(); }
+      toast('🎁 +' + fmt(r.granted), 'ok');
+      $('#bonus-backdrop').hidden = true;
+      fireConfetti();
+    } catch (e) { toast(prettyErr(e), 'err'); $('#bonus-backdrop').hidden = true; }
+  }
+
+  function fireConfetti() {
+    // tiny confetti shower using emoji for zero-dep fun
+    const n = 24;
+    for (let i = 0; i < n; i++) {
+      const el = document.createElement('div');
+      el.textContent = ['🎉','✨','🎊','💰','🪙'][i % 5];
+      el.style.cssText = 'position:fixed;top:-30px;left:' + (Math.random() * 100) + 'vw;font-size:26px;z-index:9999;pointer-events:none;transition:transform 2.2s cubic-bezier(.2,.6,.4,1), opacity 2.2s ease;';
+      document.body.appendChild(el);
+      requestAnimationFrame(() => {
+        el.style.transform = 'translateY(' + (70 + Math.random() * 20) + 'vh) rotate(' + (Math.random() * 720 - 360) + 'deg)';
+        el.style.opacity = '0';
+      });
+      setTimeout(() => el.remove(), 2400);
+    }
   }
 
   function pctOf(prob) {
@@ -998,6 +1181,19 @@
     renderCoupon();
     renderAuthBlock();
     refreshProfileStats();
+    if (state.user) setTimeout(checkDailyBonus, 800);
+  }
+
+  function shareCurrentEvent() {
+    const ev = state._detailEvent;
+    if (!ev) return;
+    const url = location.origin + '/?event=' + ev.id;
+    const text = '🎲 WorldPari: ' + ev.title + ' — ' + url;
+    if (navigator.share) {
+      navigator.share({ title: ev.title, text: text, url: url }).catch(() => {});
+    } else if (navigator.clipboard) {
+      navigator.clipboard.writeText(url).then(() => toast(T('copied') || 'Скопировано', 'ok'));
+    }
   }
 
   async function tryAutoLogin() {
@@ -1092,6 +1288,29 @@
 
     $('#resolve-close').addEventListener('click', () => $('#resolve-backdrop').hidden = true);
     $('#resolve-ok').addEventListener('click', () => $('#resolve-backdrop').hidden = true);
+
+    // sort chips
+    $$('#feed-toolbar .seg').forEach(b => b.addEventListener('click', () => {
+      state.sort = b.dataset.sort;
+      renderEvents();
+    }));
+
+    // hero CTAs
+    const heroReg = $('#hero-cta-register');
+    if (heroReg) heroReg.addEventListener('click', () => openAuth('register'));
+    const heroScroll = $('#hero-cta-scroll');
+    if (heroScroll) heroScroll.addEventListener('click', () => {
+      const t = $('#feed-toolbar') || document.querySelector('.event-card');
+      if (t) t.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+
+    // daily bonus
+    const bc = $('#bonus-claim'); if (bc) bc.addEventListener('click', claimBonus);
+    const bcl = $('#bonus-close'); if (bcl) bcl.addEventListener('click', () => $('#bonus-backdrop').hidden = true);
+
+    // event detail modal
+    const edc = $('#ed-close'); if (edc) edc.addEventListener('click', () => $('#event-detail-backdrop').hidden = true);
+    const eds = $('#ed-share'); if (eds) eds.addEventListener('click', () => shareCurrentEvent());
 
     $('#stream-close').addEventListener('click', closeStream);
     $('#stream-set-url').addEventListener('click', startMyStream);

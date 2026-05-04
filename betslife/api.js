@@ -195,6 +195,14 @@
       return req('GET', '/api/admin/events?' + params.toString());
     },
     adminDeleteEvent: (id) => req('DELETE', `/api/admin/events/${id}`),
+    // social
+    leaderboard: (period = 'all', limit = 20) =>
+      req('GET', `/api/social/leaderboard?period=${encodeURIComponent(period)}&limit=${limit}`),
+    publicProfile: (username) =>
+      req('GET', `/api/social/profile/${encodeURIComponent(username)}`),
+    bonusStatus: () => req('GET', '/api/social/bonus/status'),
+    bonusClaim: () => req('POST', '/api/social/bonus/claim'),
+
     adminListChat: (eventId = null, limit = 200) => {
       const params = new URLSearchParams();
       if (eventId !== null && eventId !== undefined && eventId !== '')

@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /admin.html
+Disallow: /api/
+
+Sitemap: https://worldpari.com/sitemap.xml
+Sitemap: https://worldpari.ru/sitemap.xml
