@@ -158,6 +158,91 @@ let juiceDrops = [];
 let bgPulse = 0;
 let frameCount = 0;
 
+// ─── Background visual system ───
+const bgStars = [];
+const bgBokeh = [];
+const ambientParticles = [];
+let impactRings = [];
+let dropTrail = [];
+let bgHue = 220;
+
+function initBGEffects() {
+    bgStars.length = 0; bgBokeh.length = 0;
+    for (let i = 0; i < 60; i++) {
+        bgStars.push({ x: Math.random(), y: Math.random(), s: 0.5 + Math.random() * 1.5, tw: Math.random() * Math.PI * 2, spd: 0.02 + Math.random() * 0.04 });
+    }
+    for (let i = 0; i < 12; i++) {
+        bgBokeh.push({ x: Math.random(), y: Math.random(), r: 15 + Math.random() * 40, vx: (Math.random() - 0.5) * 0.0003, vy: -0.0001 - Math.random() * 0.0003, alpha: 0.03 + Math.random() * 0.06, hue: 20 + Math.random() * 30 });
+    }
+}
+initBGEffects();
+
+function spawnAmbient() {
+    if (ambientParticles.length > 25) return;
+    ambientParticles.push({ x: Math.random() * W, y: H + 5, vy: -0.3 - Math.random() * 0.6, vx: (Math.random() - 0.5) * 0.3, s: 1 + Math.random() * 2, alpha: 0.2 + Math.random() * 0.3, hue: 30 + Math.random() * 30 });
+}
+function updateAmbient() {
+    if (frameCount % 8 === 0) spawnAmbient();
+    for (let i = ambientParticles.length - 1; i >= 0; i--) {
+        const p = ambientParticles[i];
+        p.y += p.vy; p.x += p.vx; p.alpha -= 0.001;
+        if (p.y < -10 || p.alpha <= 0) ambientParticles.splice(i, 1);
+    }
+}
+function drawAmbient() {
+    for (const p of ambientParticles) {
+        ctx.globalAlpha = p.alpha * 0.5;
+        ctx.fillStyle = `hsl(${p.hue},80%,70%)`;
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.s, 0, Math.PI * 2); ctx.fill();
+        ctx.globalAlpha = p.alpha * 0.2;
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.s * 3, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+}
+
+function addImpactRing(x, y) {
+    impactRings.push({ x, y, r: 5, maxR: 50 + Math.random() * 30, alpha: 0.6, color: fever ? '#FF6B35' : '#FFD700' });
+}
+function updateImpactRings() {
+    for (let i = impactRings.length - 1; i >= 0; i--) {
+        const ring = impactRings[i];
+        ring.r += 2.5; ring.alpha -= 0.025;
+        if (ring.alpha <= 0 || ring.r >= ring.maxR) impactRings.splice(i, 1);
+    }
+}
+function drawImpactRings() {
+    for (const ring of impactRings) {
+        ctx.globalAlpha = ring.alpha;
+        ctx.strokeStyle = ring.color; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(ring.x, ring.y, ring.r, 0, Math.PI * 2); ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+}
+
+function addDropTrail(x, y, w, h) {
+    for (let i = 0; i < 2; i++) {
+        dropTrail.push({ x: x + w * 0.2 + Math.random() * w * 0.6, y: y + h / 2, alpha: 0.4, s: 2 + Math.random() * 3 });
+    }
+}
+function updateDropTrail() {
+    for (let i = dropTrail.length - 1; i >= 0; i--) {
+        const t = dropTrail[i];
+        t.alpha -= 0.03; t.s *= 0.95;
+        if (t.alpha <= 0) dropTrail.splice(i, 1);
+    }
+}
+function drawDropTrail() {
+    for (const t of dropTrail) {
+        ctx.globalAlpha = t.alpha * 0.5;
+        const g = ctx.createRadialGradient(t.x, t.y, 0, t.x, t.y, t.s * 3);
+        g.addColorStop(0, fever ? 'rgba(255,100,0,0.5)' : 'rgba(255,215,0,0.4)');
+        g.addColorStop(1, 'rgba(255,215,0,0)');
+        ctx.fillStyle = g;
+        ctx.beginPath(); ctx.arc(t.x, t.y, t.s * 3, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+}
+
 // ─── DPR-aware resize ───
 function resize() {
     const dpr = window.devicePixelRatio || 1;
@@ -818,43 +903,108 @@ const DRAW_FNS = {
 // ─── Plate ───
 function drawPlate(cx, y) {
     const pw = ING_W + 80;
-    ctx.fillStyle = 'rgba(0,0,0,0.35)';
-    ctx.beginPath(); ctx.ellipse(cx, y + 14, pw / 2 + 3, 12, 0, 0, Math.PI * 2); ctx.fill();
+    // Under-glow (warm light reflection on surface below)
+    const ugr = ctx.createRadialGradient(cx, y + 20, 5, cx, y + 20, pw * 0.7);
+    ugr.addColorStop(0, 'rgba(255,180,80,0.08)'); ugr.addColorStop(0.5, 'rgba(255,150,50,0.03)'); ugr.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = ugr;
+    ctx.beginPath(); ctx.ellipse(cx, y + 20, pw * 0.7, 25, 0, 0, Math.PI * 2); ctx.fill();
+    // Shadow (larger, softer)
+    ctx.fillStyle = 'rgba(0,0,0,0.4)';
+    ctx.beginPath(); ctx.ellipse(cx, y + 14, pw / 2 + 5, 14, 0, 0, Math.PI * 2); ctx.fill();
+    // Plate edge (chrome look)
     let pg = ctx.createLinearGradient(cx - pw / 2, y, cx + pw / 2, y);
-    pg.addColorStop(0, '#546E7A'); pg.addColorStop(0.5, '#90A4AE'); pg.addColorStop(1, '#546E7A');
+    pg.addColorStop(0, '#455A64'); pg.addColorStop(0.2, '#78909C'); pg.addColorStop(0.5, '#B0BEC5');
+    pg.addColorStop(0.8, '#78909C'); pg.addColorStop(1, '#455A64');
     ctx.fillStyle = pg;
-    ctx.beginPath(); ctx.ellipse(cx, y + 7, pw / 2, 11, 0, 0, Math.PI * 2); ctx.fill();
-    pg = ctx.createRadialGradient(cx, y, 5, cx, y, pw / 2);
-    pg.addColorStop(0, '#CFD8DC'); pg.addColorStop(0.7, '#B0BEC5'); pg.addColorStop(1, '#78909C');
+    ctx.beginPath(); ctx.ellipse(cx, y + 7, pw / 2 + 2, 13, 0, 0, Math.PI * 2); ctx.fill();
+    // Plate top surface (polished)
+    pg = ctx.createRadialGradient(cx - pw * 0.15, y - 2, 3, cx, y, pw / 2);
+    pg.addColorStop(0, '#ECEFF1'); pg.addColorStop(0.3, '#CFD8DC'); pg.addColorStop(0.7, '#B0BEC5'); pg.addColorStop(1, '#78909C');
     ctx.fillStyle = pg;
-    ctx.beginPath(); ctx.ellipse(cx, y, pw / 2 - 3, 9, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = 'rgba(255,255,255,0.2)'; ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.ellipse(cx, y - 1, pw / 2 - 8, 5, 0, Math.PI * 1.1, Math.PI * 1.9); ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(cx, y, pw / 2 - 1, 10, 0, 0, Math.PI * 2); ctx.fill();
+    // Rim highlight (polished rim shine)
+    ctx.strokeStyle = 'rgba(255,255,255,0.3)'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.ellipse(cx, y - 1, pw / 2 - 6, 6, 0, Math.PI * 1.05, Math.PI * 1.95); ctx.stroke();
+    // Inner ring detail
+    ctx.strokeStyle = 'rgba(0,0,0,0.08)'; ctx.lineWidth = 0.5;
+    ctx.beginPath(); ctx.ellipse(cx, y + 1, pw / 2 - 15, 6, 0, 0, Math.PI * 2); ctx.stroke();
 }
 
 // ─── Background ───
 function drawBG() {
+    // Dynamic gradient that shifts hue slowly
+    bgHue = 220 + Math.sin(frameCount * 0.003) * 15;
+    const topCol = `hsl(${bgHue}, 30%, 5%)`;
+    const midCol = `hsl(${bgHue + 10}, 25%, 8%)`;
+    const botCol = `hsl(${bgHue - 5}, 35%, 4%)`;
     const g = ctx.createLinearGradient(0, 0, 0, H);
-    g.addColorStop(0, '#0d1117'); g.addColorStop(0.4, '#161b22'); g.addColorStop(1, '#0d1117');
+    g.addColorStop(0, topCol); g.addColorStop(0.5, midCol); g.addColorStop(1, botCol);
     ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
 
-    // Fever background pulse
-    if (fever) {
-        const pulse = Math.sin(frameCount * 0.08) * 0.5 + 0.5;
-        ctx.fillStyle = `rgba(255,100,0,${0.03 + pulse * 0.04})`;
-        ctx.fillRect(0, 0, W, H);
+    // Twinkling stars
+    for (const star of bgStars) {
+        star.tw += star.spd;
+        const twinkle = Math.sin(star.tw) * 0.5 + 0.5;
+        ctx.globalAlpha = 0.15 + twinkle * 0.45;
+        ctx.fillStyle = '#fff';
+        ctx.beginPath(); ctx.arc(star.x * W, star.y * H, star.s, 0, Math.PI * 2); ctx.fill();
+        if (star.s > 1.2) {
+            ctx.globalAlpha = twinkle * 0.08;
+            ctx.beginPath(); ctx.arc(star.x * W, star.y * H, star.s * 4, 0, Math.PI * 2); ctx.fill();
+        }
+    }
+    ctx.globalAlpha = 1;
+
+    // Floating bokeh orbs
+    for (const b of bgBokeh) {
+        b.x += b.vx; b.y += b.vy;
+        if (b.x < -0.05) b.x = 1.05; if (b.x > 1.05) b.x = -0.05;
+        if (b.y < -0.05) b.y = 1.05;
+        const pulse = Math.sin(frameCount * 0.02 + b.hue) * 0.3 + 0.7;
+        const bx = b.x * W, by = b.y * H;
+        const bg = ctx.createRadialGradient(bx, by, 0, bx, by, b.r);
+        bg.addColorStop(0, `hsla(${b.hue + (fever ? 0 : 200)}, 70%, 60%, ${b.alpha * pulse})`);
+        bg.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = bg;
+        ctx.beginPath(); ctx.arc(bx, by, b.r, 0, Math.PI * 2); ctx.fill();
     }
 
-    // Side borders (glow more during fever)
-    const bw = fever ? 5 : 3;
-    const bc = fever ? 'rgba(255,100,0,' : 'rgba(255,150,50,';
-    const bi = fever ? '0.3' : '0.15';
-    const bg1 = ctx.createLinearGradient(0, 0, bw, 0);
-    bg1.addColorStop(0, bc + bi + ')'); bg1.addColorStop(1, bc + '0)');
-    ctx.fillStyle = bg1; ctx.fillRect(0, 0, bw, H);
-    const bg2 = ctx.createLinearGradient(W, 0, W - bw, 0);
-    bg2.addColorStop(0, bc + bi + ')'); bg2.addColorStop(1, bc + '0)');
-    ctx.fillStyle = bg2; ctx.fillRect(W - bw, 0, bw, H);
+    // Fever background pulse (more dramatic)
+    if (fever) {
+        const pulse = Math.sin(frameCount * 0.08) * 0.5 + 0.5;
+        ctx.fillStyle = `rgba(255,80,0,${0.04 + pulse * 0.06})`;
+        ctx.fillRect(0, 0, W, H);
+        // Fire border glow
+        const fw = 12;
+        const fAlpha = 0.15 + pulse * 0.2;
+        const flg = ctx.createLinearGradient(0, 0, fw, 0);
+        flg.addColorStop(0, `rgba(255,80,0,${fAlpha})`); flg.addColorStop(0.5, `rgba(255,150,0,${fAlpha * 0.5})`); flg.addColorStop(1, 'rgba(255,80,0,0)');
+        ctx.fillStyle = flg; ctx.fillRect(0, 0, fw, H);
+        const frg = ctx.createLinearGradient(W, 0, W - fw, 0);
+        frg.addColorStop(0, `rgba(255,80,0,${fAlpha})`); frg.addColorStop(0.5, `rgba(255,150,0,${fAlpha * 0.5})`); frg.addColorStop(1, 'rgba(255,80,0,0)');
+        ctx.fillStyle = frg; ctx.fillRect(W - fw, 0, fw, H);
+        // Top fire glow
+        const ftg = ctx.createLinearGradient(0, 0, 0, fw);
+        ftg.addColorStop(0, `rgba(255,80,0,${fAlpha})`); ftg.addColorStop(1, 'rgba(255,80,0,0)');
+        ctx.fillStyle = ftg; ctx.fillRect(0, 0, W, fw);
+    } else {
+        // Subtle side glow (warm)
+        const bw = 4;
+        const bg1 = ctx.createLinearGradient(0, 0, bw * 3, 0);
+        bg1.addColorStop(0, 'rgba(255,150,50,0.08)'); bg1.addColorStop(1, 'rgba(255,150,50,0)');
+        ctx.fillStyle = bg1; ctx.fillRect(0, 0, bw * 3, H);
+        const bg2 = ctx.createLinearGradient(W, 0, W - bw * 3, 0);
+        bg2.addColorStop(0, 'rgba(255,150,50,0.08)'); bg2.addColorStop(1, 'rgba(255,150,50,0)');
+        ctx.fillStyle = bg2; ctx.fillRect(W - bw * 3, 0, bw * 3, H);
+    }
+
+    // Ambient floating particles
+    drawAmbient();
+
+    // Vignette (dark corners for cinematic depth)
+    const vg = ctx.createRadialGradient(W / 2, H / 2, H * 0.25, W / 2, H / 2, H * 0.75);
+    vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.35)');
+    ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
 }
 
 function drawInstMeter() {
@@ -905,6 +1055,8 @@ function startGame() {
     isNewRecord = false; isGolden = false;
     floatingTexts = []; juiceDrops = []; shakeIntensity = 0;
     bgPulse = 0; frameCount = 0;
+    impactRings = []; dropTrail = []; ambientParticles.length = 0;
+    initBGEffects();
     gamePaused = false; pauseOverlay.classList.remove('active');
     showScreen('game');
     resize();
@@ -947,8 +1099,9 @@ function landIng() {
     const px = lp.cx, py = lp.y;
     const screenY = py - cameraY;
 
-    // Juice splatter on land
+    // Juice splatter on land + impact ring
     spawnJuiceSplatter(px, screenY, fi.ing.pattern);
+    addImpactRing(px, screenY);
     triggerShake(4);
 
     const goldenMul = wasGolden ? 3 : 1;
@@ -1225,6 +1378,7 @@ function update() {
     }
     if (fallIng && (gameState === 'dropping' || gameState === 'topbun')) {
         fallIng.vy += GRAVITY; fallIng.wY += fallIng.vy;
+        addDropTrail(fallIng.x, fallIng.wY - cameraY, fallIng.w, fallIng.h);
         if (fallIng.wY >= fallIng.tY) { fallIng.wY = fallIng.tY; fallIng.isTop ? landTopBun() : landIng(); }
     }
     if (gameState === 'collapsing') for (const p of colPieces) { p.vy += 0.5; p.x += p.vx; p.y += p.vy; p.a += p.va; }
@@ -1238,6 +1392,9 @@ function update() {
     updateParticles();
     updateFloatingTexts();
     updateJuiceDrops();
+    updateAmbient();
+    updateImpactRings();
+    updateDropTrail();
 }
 
 function landTopBun() {
@@ -1253,6 +1410,7 @@ function draw() {
     ctx.translate(shakeX, shakeY);
 
     drawBG();
+    drawDropTrail();
     const ps = stackPos();
     if (ps.length > 0) drawPlate(W / 2, plateBaseY - cameraY);
 
@@ -1261,7 +1419,6 @@ function draw() {
     ctx.translate(pvX, pvY); ctx.rotate(swayAngle); ctx.translate(-pvX, -pvY);
     for (let i = 0; i < ps.length; i++) {
         const p = ps[i];
-        // Golden glow for the last-placed golden ingredient
         drawIng(p.x, p.y - cameraY, p.w, p.h, p.ing);
     }
     if (fallIng && (gameState === 'dropping' || gameState === 'topbun'))
@@ -1273,14 +1430,24 @@ function draw() {
     if (curIng && gameState === 'playing') {
         ctx.save();
         const cx = curIng.x + curIng.w / 2;
-        // Guide line
-        ctx.strokeStyle = 'rgba(255,255,255,0.04)'; ctx.setLineDash([3, 6]);
+        // Neon guide line
+        const guideAlpha = 0.06 + Math.sin(frameCount * 0.06) * 0.02;
+        ctx.strokeStyle = fever ? `rgba(255,120,0,${guideAlpha * 2})` : `rgba(100,200,255,${guideAlpha})`;
+        ctx.lineWidth = 1.5; ctx.setLineDash([4, 8]);
         ctx.beginPath(); ctx.moveTo(cx, curIng.sY + curIng.h); ctx.lineTo(cx, H); ctx.stroke();
         ctx.setLineDash([]);
-        // Target zone
+        // Neon glow around guide line
+        ctx.globalAlpha = guideAlpha * 0.4;
+        ctx.strokeStyle = fever ? '#FF6B35' : '#64B5F6';
+        ctx.lineWidth = 6; ctx.filter = 'blur(3px)';
+        ctx.beginPath(); ctx.moveTo(cx, curIng.sY + curIng.h); ctx.lineTo(cx, H); ctx.stroke();
+        ctx.filter = 'none'; ctx.lineWidth = 1; ctx.globalAlpha = 1;
+
+        // Target zone (glowing)
         if (ps.length > 0) {
             const tp = ps[ps.length - 1];
-            const zoneColor = fever ? 'rgba(255,150,0,0.15)' : 'rgba(76,175,80,0.12)';
+            const zAlpha = 0.08 + Math.sin(frameCount * 0.05) * 0.04;
+            const zoneColor = fever ? `rgba(255,150,0,${zAlpha * 2})` : `rgba(76,175,80,${zAlpha})`;
             ctx.strokeStyle = zoneColor; ctx.lineWidth = PERFECT_TH * 2;
             ctx.beginPath(); ctx.moveTo(tp.cx, curIng.sY + curIng.h + 10); ctx.lineTo(tp.cx, tp.y - cameraY); ctx.stroke();
             ctx.lineWidth = 1;
@@ -1288,24 +1455,31 @@ function draw() {
         ctx.restore();
         drawIng(curIng.x, curIng.sY, curIng.w, curIng.h, curIng.ing, 0, isGolden);
 
-        // Ingredient name
-        ctx.fillStyle = isGolden ? '#FFD700' : 'rgba(255,255,255,0.45)';
+        // Ingredient name with glow
+        ctx.save();
+        if (isGolden) {
+            ctx.shadowColor = '#FFD700'; ctx.shadowBlur = 8;
+        }
+        ctx.fillStyle = isGolden ? '#FFD700' : 'rgba(255,255,255,0.5)';
         ctx.font = `${isGolden ? 'bold ' : ''}12px "Segoe UI",sans-serif`;
         ctx.textAlign = 'center';
         ctx.fillText(isGolden ? '★ ' + curIng.ing.name + ' ★' : curIng.ing.name, curIng.x + curIng.w / 2, curIng.sY - 6);
+        ctx.restore();
     }
     if (gameState === 'playing' || gameState === 'dropping' || gameState === 'dog') {
         drawInstMeter();
         drawComboMeter();
     }
     if (dogActive) drawDog(dogX, dogY);
+    drawImpactRings();
     drawJuiceDrops();
     drawParticles();
     drawFloatingTexts();
 
-    // Fever overlay glow
+    // Fever overlay glow (top and bottom borders pulse)
     if (fever) {
-        ctx.fillStyle = `rgba(255,100,0,${0.03 * feverGlow})`;
+        const fv = 0.03 + feverGlow * 0.04;
+        ctx.fillStyle = `rgba(255,100,0,${fv})`;
         ctx.fillRect(0, 0, W, H);
     }
 
@@ -1416,3 +1590,62 @@ if (startBestEl && personalBest > 0) {
     startBestEl.textContent = `Твой рекорд: ${personalBest} очков, ${bestFloors} этажей`;
 }
 showScreen('start'); loop(); initSDK();
+
+// ─── Animated menu background ───
+(function() {
+    const bgc = document.getElementById('bg-canvas');
+    if (!bgc) return;
+    const bctx = bgc.getContext('2d');
+    const menuStars = [], menuBokeh = [];
+    let bW, bH, bFrame = 0;
+
+    function resizeBG() {
+        bW = window.innerWidth; bH = window.innerHeight;
+        bgc.width = bW; bgc.height = bH;
+    }
+    window.addEventListener('resize', resizeBG);
+    resizeBG();
+
+    for (let i = 0; i < 80; i++) {
+        menuStars.push({ x: Math.random() * bW, y: Math.random() * bH, s: 0.3 + Math.random() * 1.5, tw: Math.random() * Math.PI * 2, spd: 0.01 + Math.random() * 0.03 });
+    }
+    for (let i = 0; i < 8; i++) {
+        menuBokeh.push({ x: Math.random() * bW, y: Math.random() * bH, r: 30 + Math.random() * 60, vx: (Math.random() - 0.5) * 0.3, vy: (Math.random() - 0.5) * 0.2, hue: 20 + Math.random() * 30, alpha: 0.02 + Math.random() * 0.04 });
+    }
+
+    function drawMenuBG() {
+        bFrame++;
+        const hue = 220 + Math.sin(bFrame * 0.002) * 15;
+        const g = bctx.createLinearGradient(0, 0, 0, bH);
+        g.addColorStop(0, `hsl(${hue}, 25%, 4%)`);
+        g.addColorStop(0.5, `hsl(${hue + 10}, 20%, 7%)`);
+        g.addColorStop(1, `hsl(${hue - 5}, 30%, 3%)`);
+        bctx.fillStyle = g; bctx.fillRect(0, 0, bW, bH);
+
+        for (const s of menuStars) {
+            s.tw += s.spd;
+            const tw = Math.sin(s.tw) * 0.5 + 0.5;
+            bctx.globalAlpha = 0.1 + tw * 0.5;
+            bctx.fillStyle = '#fff';
+            bctx.beginPath(); bctx.arc(s.x, s.y, s.s, 0, Math.PI * 2); bctx.fill();
+        }
+        bctx.globalAlpha = 1;
+
+        for (const b of menuBokeh) {
+            b.x += b.vx; b.y += b.vy;
+            if (b.x < -b.r) b.x = bW + b.r;
+            if (b.x > bW + b.r) b.x = -b.r;
+            if (b.y < -b.r) b.y = bH + b.r;
+            if (b.y > bH + b.r) b.y = -b.r;
+            const pulse = Math.sin(bFrame * 0.015 + b.hue) * 0.3 + 0.7;
+            const bg = bctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, b.r);
+            bg.addColorStop(0, `hsla(${b.hue}, 70%, 55%, ${b.alpha * pulse})`);
+            bg.addColorStop(1, 'rgba(0,0,0,0)');
+            bctx.fillStyle = bg;
+            bctx.beginPath(); bctx.arc(b.x, b.y, b.r, 0, Math.PI * 2); bctx.fill();
+        }
+
+        requestAnimationFrame(drawMenuBG);
+    }
+    drawMenuBG();
+})();
