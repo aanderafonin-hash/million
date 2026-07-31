@@ -199,7 +199,7 @@
       cell.innerHTML =
         '<div class="num">' + lv.id + '</div>' +
         '<div class="badge">' + (cleared ? lv.reward.icon : (unlocked ? '🦴' : '🔒')) + '</div>';
-      cell.title = lv.name + (unlocked ? ' — ' + lv.bonesToWin + ' косточек' : ' — закрыт');
+      cell.title = lv.name + (unlocked ? ' — 100 очков (10 косточек)' : ' — закрыт');
       if (unlocked) {
         cell.addEventListener('click', () => startLevel(lv.id));
       }
@@ -234,7 +234,7 @@
 
     hudLevel.textContent = String(lv.id);
     hudBones.textContent = '0';
-    hudGoal.textContent = String(lv.bonesToWin);
+    hudGoal.textContent = String(lv.pointsToWin);
     hudScore.textContent = '0';
     hudEl.classList.remove('hidden');
     showOnly(null);
@@ -493,7 +493,7 @@
     state.dog.unshift({ x: nx, y: ny });
     if (willEat) {
       state.bonesEaten += 1;
-      state.score += 10;
+      state.score += state.level.pointsPerBone;
       state.eatPulse = 1;
       spawnHearts(nx, ny);
       // Speed boost: each bone accelerates the dachshund (with a sane minimum)
